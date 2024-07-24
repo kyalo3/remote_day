@@ -1,0 +1,32 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        {% block title %}{% endblock title %} | Daybook
+    </title>
+
+    <link rel="stylesheet" href="{% static 'css/output.css' %}">
+    <script src="https://openexchangerates.github.io/money.js/money.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <header class="bg-blue-950 text-white p-4 shadow-md">
+        {% include "../partials/header.html" %}
+    </header>
+
+    <main class="">
+        {% block content %}
+        <!-- Content goes here -->
+        {% endblock %}
+    </main>
+
+    <footer class="bg-gray-800 text-white p-4 mt-8">
+        <div class="container mx-auto text-center">
+            &copy; 2024 Daybook. All rights reserved.
+        </div>
+    </footer>
+</body>
+</html>

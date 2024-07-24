@@ -1,0 +1,15 @@
+<div class="container mx-auto flex justify-between items-center">
+    <h1 class="text-2xl font-bold">Daybook</h1>
+    <nav>
+        <ul class="flex space-x-4">
+            {% if not request.user.is_authenticated %}
+            <li><a href="{% url 'login' %}" class="hover:text-gray-300">Login</a></li>
+            {% comment %} <li><a href="{% url 'register' %}" class="hover:text-gray-300">Register</a></li> {% endcomment %}
+            {% else %}
+            <li><span class="hover:text-gray-300">Welcome, {{ request.user.first_name }}</span></li>
+            <li><a href="{% url 'logout' %}" class="hover:text-gray-300">Logout</a></li>
+            {% endif %}
+            
+        </ul>
+    </nav>
+</div>

@@ -1,0 +1,1013 @@
+{% extends "../base/base.html" %}
+
+{% block title %}accountant dash{% endblock title %}
+
+{% block content %}
+<div class="w-full px-4 py-4 min-h-screen">
+
+    <div class="text-base pb-3 flex justify-between">
+        <div>
+            My companies are:
+            {% for company in request.user.company.all  %}
+            <span class="capitalize font-medium">
+                {{ company }}
+                {% if not forloop.last %}, {% endif %}
+            </span>
+            {% endfor %}
+        </div>
+        <div class="mr-4">
+            <label for="filter-company" class="block text-lg font-medium text-gray-700">Select Company</label>
+            <select id="filter-company" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">
+                <option value="">All Companies</option>
+                {% for company in request.user.company.all  %}
+                <option value="{{ company }}">{{ company }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="w-10/12 mx-auto" id="time-series-chart"></div>
+
+    <!-- Filters -->
+    <div class="flex items-center mb-4">
+        <div class="mr-4">
+            <label for="filter-date" class="block text-lg font-medium text-gray-700">Filter by Date</label>
+            <input type="date" id="filter-date" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">
+        </div>
+        <div class="mr-4">
+            <label for="filter-user" class="block text-lg font-medium text-gray-700">Filter by User</label>
+            <select id="filter-user" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">
+                <option value="">All Users</option>
+                {% for user in users %}
+                <option value="{{ user.id }}">{{ user.email }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mr-4">
+            <label for="filter-type" class="block text-lg font-medium text-gray-700">Filter by type</label>
+            <select id="filter-type" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">
+                <option value="">All Types</option>
+                
+                <option value="receipt">Receipts</option>
+                <option value="payment">Payments</option>
+                
+            </select>
+        </div>
+        <div class="mr-4 mt-6">
+            <button id="search-button" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Search
+            </button>
+            <button id="clear-button" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                Clear
+            </button>
+        </div>
+    </div>
+
+    <div class="font-medium ml-3 mb-3">Approved Entries</div>
+
+    <!-- Filter by User and Date (same as before) -->
+
+    <!-- Approved Entries Table -->
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-gray-200">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left">User</th>
+                    <th class="py-2 px-4 border-b text-left">Receipts</th>
+                    <th class="py-2 px-4 border-b text-left">Payments</th>
+                    <th class="py-2 px-4 border-b text-left">Date</th>
+                    <th class="py-2 px-4 border-b text-left">Description</th>
+                    <th class="py-2 px-4 border-b text-left">Category</th>
+                    <th class="py-2 px-4 border-b text-left">Subcategory</th>
+                    <th class="py-2 px-4 border-b text-left">Status</th>
+                </tr>
+            </thead>
+            <tbody id="entries-table-body">
+                {% for entry in entries %}
+                <tr class="{% cycle 'bg-gray-100' 'bg-white' %}">
+                    <td class="py-2 px-4 border-b">{{ entry.user.first_name }}</td>
+                    {% if entry.entry_type == 'receipt' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.receipts }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %}
+                    {% if entry.entry_type == 'payment' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.payments }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %}
+                    <td class="py-2 px-4 border-b">{{ entry.date }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.description }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.category.name }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.subcategory.name }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.get_entry_status_display }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="mt-4" id="pagination">
+        <span class="text-sm text-gray-500">Page {{ entries.number }} of {{ entries.paginator.num_pages }}</span>
+        <ul class="inline-block ml-4">
+            {% if entries.has_previous %}
+            <li>
+                <a href="?approved_page=1" class="text-blue-500 hover:text-blue-700">First</a>
+            </li>
+            <li>
+                <a href="?approved_page={{ entries.previous_page_number }}" class="text-blue-500 hover:text-blue-700">Previous</a>
+            </li>
+            {% endif %}
+            {% for num in entries.paginator.page_range %}
+            {% if entries.number == num %}
+            <li class="inline-block py-1 px-2 bg-blue-500 text-white rounded">{{ num }}</li>
+            {% else %}
+            <li class="inline-block py-1 px-2">
+                <a href="?approved_page={{ num }}" class="text-blue-500 hover:text-blue-700">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            {% if entries.has_next %}
+            <li>
+                <a href="?approved_page={{ entries.next_page_number }}" class="text-blue-500 hover:text-blue-700">Next</a>
+            </li>
+            <li>
+                <a href="?approved_page={{ entries.paginator.num_pages }}" class="text-blue-500 hover:text-blue-700">Last</a>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <div class="flex mt-3">
+        <div class="lg:text-end text-center lg:mr-10 lg:my-5">
+            <button id="create-receipt" class="inline-block px-4 md:px-6 py-1 md:py-2 text-white bg-blue-500 rounded hover:bg-blue-600 focus:outline-none focus:bg-blue-600">
+                Create Receipt
+            </button>
+        </div>
+
+        <div class="lg:text-end text-center lg:mr-10 lg:my-5">
+            <button id="create-payment" class="inline-block px-4 md:px-6 py-1 md:py-2 text-white bg-blue-500 rounded hover:bg-blue-500 focus:outline-none focus:bg-blue-500">
+                Create Payment
+            </button>
+        </div>
+    </div>
+
+
+    <div class="font-medium ml-3 my-3">Pending Entries</div>
+
+    <!-- Pending Entries Table -->
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-gray-200">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left">User</th>
+                    <th class="py-2 px-4 border-b text-left">Receipts</th>
+                    <th class="py-2 px-4 border-b text-left">Payments</th>
+                    <th class="py-2 px-4 border-b text-left">Date</th>
+                    <th class="py-2 px-4 border-b text-left">Description</th>
+                    <th class="py-2 px-4 border-b text-left">Category</th>
+                    <th class="py-2 px-4 border-b text-left">Subcategory</th>
+                    <th class="py-2 px-4 border-b text-left">Status</th>
+                </tr>
+            </thead>
+            <tbody id="pending-entries-table">
+                {% for entry in pending_entries %}
+                <tr class="{% cycle 'bg-gray-100' 'bg-white' %}">
+                    <td class="py-2 px-4 border-b">{{ entry.user.first_name }}</td>
+                    {% if entry.entry_type == 'receipt' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.receipts }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %}
+                    {% if entry.entry_type == 'payment' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.payments }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %}                    
+                    <td class="py-2 px-4 border-b">{{ entry.date }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.description }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.category }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.subcategory }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.get_entry_status_display }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+
+    <!-- pending entries Pagination -->
+    <div class="mt-4" id="pending-entries-pagination">
+        <span class="text-sm text-gray-500">Page {{ pending_entries.number }} of {{ pending_entries.paginator.num_pages }}</span>
+        <ul class="inline-block ml-4">
+            {% if pending_entries.has_previous %}
+            <li>
+                <a href="?pending_page=1" class="text-blue-500 hover:text-blue-700">First</a>
+            </li>
+            <li>
+                <a href="?pending_page={{ pending_entries.previous_page_number }}" class="text-blue-500 hover:text-blue-700">Previous</a>
+            </li>
+            {% endif %}
+            {% for num in pending_entries.paginator.page_range %}
+            {% if pending_entries.number == num %}
+            <li class="inline-block py-1 px-2 bg-blue-500 text-white rounded">{{ num }}</li>
+            {% else %}
+            <li class="inline-block py-1 px-2">
+                <a href="?pending_page={{ num }}" class="text-blue-500 hover:text-blue-700">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            {% if pending_entries.has_next %}
+            <li>
+                <a href="?pending_page={{ pending_entries.next_page_number }}" class="text-blue-500 hover:text-blue-700">Next</a>
+            </li>
+            <li>
+                <a href="?pending_page={{ pending_entries.paginator.num_pages }}" class="text-blue-500 hover:text-blue-700">Last</a>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+
+
+
+    <div class="font-medium ml-3 my-3">Rejected Entries</div>
+
+    <!-- Rejected Entries Table -->
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-gray-200">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left">User</th>
+                    <th class="py-2 px-4 border-b text-left">Receipts</th>
+                    <th class="py-2 px-4 border-b text-left">Payments</th>
+                    <th class="py-2 px-4 border-b text-left">Date</th>
+                    <th class="py-2 px-4 border-b text-left">Description</th>
+                    <th class="py-2 px-4 border-b text-left">Category</th>
+                    <th class="py-2 px-4 border-b text-left">Subcategory</th>
+                    <th class="py-2 px-4 border-b text-left">Remarks</th>
+                    <th class="py-2 px-4 border-b text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="rejected-entries-table">
+                {% for entry in rejected_entries %}
+                <tr class="{% cycle 'bg-gray-100' 'bg-white' %}">
+                    <td class="py-2 px-4 border-b">{{ entry.user.first_name }}</td>
+                    {% if entry.entry_type == 'receipt' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.receipts }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %}
+                    {% if entry.entry_type == 'payment' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.payments }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %}
+                    <td class="py-2 px-4 border-b">{{ entry.date }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.description }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.category }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.subcategory }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.remarks }}</td>
+                    <td class="py-2 px-4 border-b">
+                        {% if entry.entry_type == 'payment' %}
+                        <a href="{% url 'edit_payment' entry.id %}" class="text-blue-500 hover:text-blue-700 mr-2">Edit</a>
+                        {% elif entry.entry_type == 'receipt' %}
+                        <a href="{% url 'edit_receipt' entry.id %}" class="text-blue-500 hover:text-blue-700 mr-2">Edit</a>
+                        {% endif %}
+                        <a href="{% url 'resubmit_entry' entry.id %}" class="text-blue-500 hover:text-blue-700">Resubmit</a> 
+                        <a href="{% url 'delete_entry' entry.id %}" class="text-red-500 hover:text-red-700">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+
+    <!-- rejected entries Pagination -->
+    <div class="mt-4" id="rejected-entries-pagination">
+        <span class="text-sm text-gray-500">Page {{ rejected_entries.number }} of {{ rejected_entries.paginator.num_pages }}</span>
+        <ul class="inline-block ml-4">
+            {% if rejected_entries.has_previous %}
+            <li>
+                <a href="?rejected_page=1" class="text-blue-500 hover:text-blue-700">First</a>
+            </li>
+            <li>
+                <a href="?rejected_page={{ rejected_entries.previous_page_number }}" class="text-blue-500 hover:text-blue-700">Previous</a>
+            </li>
+            {% endif %}
+            {% for num in rejected_entries.paginator.page_range %}
+            {% if rejected_entries.number == num %}
+            <li class="inline-block py-1 px-2 bg-blue-500 text-white rounded">{{ num }}</li>
+            {% else %}
+            <li class="inline-block py-1 px-2">
+                <a href="?rejected_page={{ num }}" class="text-blue-500 hover:text-blue-700">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            {% if rejected_entries.has_next %}
+            <li>
+                <a href="?rejected_page={{ rejected_entries.next_page_number }}" class="text-blue-500 hover:text-blue-700">Next</a>
+            </li>
+            <li>
+                <a href="?rejected_page={{ rejected_entries.paginator.num_pages }}" class="text-blue-500 hover:text-blue-700">Last</a>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <div class="font-medium ml-3 my-5 ">Large Entries</div>
+
+    <!-- excel Entries Table -->
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-gray-200">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left">User</th>
+                    <th class="py-2 px-4 border-b text-left">Receipts</th>
+                    <th class="py-2 px-4 border-b text-left">Payments</th>
+                    <th class="py-2 px-4 border-b text-left">Date</th>
+                    <th class="py-2 px-4 border-b text-left">Description</th>
+                    <th class="py-2 px-4 border-b text-left">Category</th>
+                    <th class="py-2 px-4 border-b text-left">Subcategory</th>
+                    <th class="py-2 px-4 border-b text-left">Status</th>
+                </tr>
+            </thead>
+            <tbody id="irregular-entries-table">
+                {% for entry in irregular_entries %}
+                <tr class="{% cycle 'bg-gray-100' 'bg-white' %}">
+                    <td class="py-2 px-4 border-b">{{ entry.user.first_name }}</td>
+                    {% if entry.entry_type == 'receipt' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.receipts }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %}
+                    {% if entry.entry_type == 'payment' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.payments }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %}
+                    <td class="py-2 px-4 border-b">{{ entry.date }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.description }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.category }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.subcategory }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.get_entry_status_display }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+
+    <!-- irregular entries Pagination -->
+    <div class="mt-4" id="irregular-entries-pagination">
+        <span class="text-sm text-gray-500">Page {{ irregular_entries.number }} of {{ irregular_entries.paginator.num_pages }}</span>
+        <ul class="inline-block ml-4">
+            {% if irregular_entries.has_previous %}
+            <li>
+                <a href="?irregular_page=1" class="text-blue-500 hover:text-blue-700">First</a>
+            </li>
+            <li>
+                <a href="?irregular_page={{ irregular_entries.previous_page_number }}" class="text-blue-500 hover:text-blue-700">Previous</a>
+            </li>
+            {% endif %}
+            {% for num in irregular_entries.paginator.page_range %}
+            {% if irregular_entries.number == num %}
+            <li class="inline-block py-1 px-2 bg-blue-500 text-white rounded">{{ num }}</li>
+            {% else %}
+            <li class="inline-block py-1 px-2">
+                <a href="?irregular_page={{ num }}" class="text-blue-500 hover:text-blue-700">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            {% if irregular_entries.has_next %}
+            <li>
+                <a href="?irregular_page={{ irregular_entries.next_page_number }}" class="text-blue-500 hover:text-blue-700">Next</a>
+            </li>
+            <li>
+                <a href="?irregular_page={{ irregular_entries.paginator.num_pages }}" class="text-blue-500 hover:text-blue-700">Last</a>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+
+
+    <div class="flex">
+        <div class="lg:text-end text-center lg:mr-10 lg:my-5">
+            <button id="create-big-receipt" class="inline-block px-4 md:px-6 py-1 md:py-2 text-white bg-blue-500 rounded hover:bg-blue-600 focus:outline-none focus:bg-blue-600">
+                Create Big Receipt
+            </button>
+        </div>
+
+        <div class="lg:text-end text-center lg:mr-10 lg:my-5">
+            <button id="create-big-payment" class="inline-block px-4 md:px-6 py-1 md:py-2 text-white bg-blue-500 rounded hover:bg-blue-500 focus:outline-none focus:bg-blue-500">
+                Create Big Payment
+            </button>
+        </div>
+    </div>
+
+
+</div>
+
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://openexchangerates.github.io/money.js/money.min.js"></script>
+
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function () {
+        // Set base currency for fx library
+        fx.base = "USD";
+    
+        // Function to convert amounts to USD using fetched exchange rates
+        function convertToUSD(amount, currency, rates) {
+            // Check if the currency exists in the rates object
+            if (rates.hasOwnProperty(currency)) {
+                // Convert amount to USD using the fetched exchange rate
+                return amount / rates[currency];
+            } else {
+                console.error(`Exchange rate not available for currency: ${currency}`);
+                return amount; // Return the original amount if exchange rate not found
+            }
+        }
+    
+        // Data from Django template context
+        const dates = {{ dates|safe }};
+        let receipts = {{ receipts|safe }};
+        let payments = {{ payments|safe }};
+        const currencies = {{ currencies|safe }}; // Get the currency of each entry
+    
+        // Convert dates to JavaScript Date objects
+        const datesFormatted = dates.map(dateStr => new Date(dateStr));
+    
+        // Fetch latest exchange rates from Open Exchange Rates API
+        const apiKey = '803f4a7d03cd456c8f76d44af394080b';  // Replace with your actual API key
+        const apiUrl = `https://open.exchangerate-api.com/v6/latest/${fx.base}?apiKey=${apiKey}`;
+    
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch exchange rates');
+                }
+                return response.json();
+            })
+            .then(data => {
+                const exchangeRates = data.rates;
+    
+                // Convert all entries to USD using fetched exchange rates
+                receipts = receipts.map((amount, index) => convertToUSD(amount, currencies[index], exchangeRates));
+                payments = payments.map((amount, index) => convertToUSD(amount, currencies[index], exchangeRates));
+
+                console.log(receipts, payments)
+    
+                // Define data traces
+                const trace1 = {
+                    x: datesFormatted,
+                    y: receipts,
+                    mode: 'lines+markers',
+                    type: 'scatter',
+                    name: 'Receipts',
+                    line: {color: 'rgba(75, 192, 192, 1)'},
+                    fill: 'tozeroy'
+                };
+    
+                const trace2 = {
+                    x: datesFormatted,
+                    y: payments,
+                    mode: 'lines+markers',
+                    type: 'scatter',
+                    name: 'Payments',
+                    line: {color: 'rgba(255, 99, 132, 1)'},
+                    fill: 'tozeroy'
+                };
+    
+                const data_new = [trace1, trace2];
+    
+                // Define layout options
+                const layout = {
+                    title: 'Receipts and Payments Over Time',
+                    xaxis: {
+                        title: 'Date',
+                        tickformat: '%Y-%m-%d',
+                        automargin: true
+                    },
+                    yaxis: {
+                        title: 'Amount in $',
+                        automargin: true
+                    }
+                };
+    
+                // Render Plotly.js chart
+                Plotly.newPlot('time-series-chart', data_new, layout);
+            })
+            .catch(error => {
+                console.error('Error fetching exchange rates:', error);
+            });
+    });
+</script>
+
+
+
+
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchButton = document.getElementById('search-button');
+        const clearButton = document.getElementById('clear-button');
+        const dateFilter = document.getElementById('filter-date');
+        const userFilter = document.getElementById('filter-user');
+        const typeFilter = document.getElementById('filter-type');
+        const companyFilter = document.getElementById('filter-company');
+        const entriesTableBody = document.getElementById('entries-table-body');
+        const pendingEntriesTable = document.getElementById('pending-entries-table');
+        const rejectedEntriesTable = document.getElementById('rejected-entries-table');
+        const irregularEntriesTable = document.getElementById('irregular-entries-table');
+        const pagination = document.getElementById('pagination');
+        const pendingEntriesPagination = document.getElementById('pending-entries-pagination');
+        const rejectedEntriesPagination = document.getElementById('rejected-entries-pagination');
+        const irregularEntriesPagination = document.getElementById('irregular-entries-pagination');
+        const createReceipt = document.getElementById('create-receipt');
+        const createPayment = document.getElementById('create-payment');
+        const createBigReceipt = document.getElementById('create-big-receipt');
+        const createBigPayment = document.getElementById('create-big-payment');
+
+
+        //empty or from localStorage
+        let company = localStorage.getItem('selectedCompany') || '';
+
+        //reflect company on localStorage to selection dial
+        companyFilter.value = company
+
+        //call on load and reload
+        companyChanged(company);
+
+        companyFilter.addEventListener('change', () => {
+            company = companyFilter.value;
+            localStorage.setItem('selectedCompany', company);
+
+            companyChanged(company);
+        });
+        
+
+        createReceipt.addEventListener('click', () => {
+            console.log(company, 'inside create receipt')
+            if (company === ''){
+                alert('please select a company first.');
+            } else{
+                const url = new URL(`/entries/create-receipt/${company}/`, window.location.origin);
+                window.location.href = url;
+            }
+            
+        });
+
+        createPayment.addEventListener('click', () => {
+            if (company === ''){
+                alert('please select a company first.');
+            } else{
+                const url = new URL(`/entries/create-payment/${company}/`, window.location.origin);
+                window.location.href = url;
+            }
+            
+        });
+
+        createBigReceipt.addEventListener('click', () => {
+            if (company === ''){
+                alert('please select a company first.');
+            } else{
+                const url = new URL(`/entries/create-big-receipt/${company}/`, window.location.origin);
+                window.location.href = url;
+            }
+        });
+
+        createBigPayment.addEventListener('click', () => {
+            if (company === ''){
+                alert('please select a company first.');
+            } else{
+                const url = new URL(`/entries/create-big-payment/${company}/`, window.location.origin);
+                window.location.href = url;
+            }
+            
+        });
+
+    
+        // Function to convert amounts to USD using fetched exchange rates
+        function convertToUSD(amount, currency, rates) {
+            // Check if the currency exists in the rates object
+            if (rates.hasOwnProperty(currency)) {
+                // Convert amount to USD using the fetched exchange rate
+                return amount / rates[currency];
+            } else {
+                console.error(`Exchange rate not available for currency: ${currency}`);
+                return amount; // Return the original amount if exchange rate not found
+            }
+        }
+
+        function fetchEntries(company, page=1) {
+            const date = dateFilter.value;
+            const user = userFilter.value;
+            const type = typeFilter.value;
+            
+
+            // Construct URL with query parameters
+            const url = new URL('/entries/filter-approved-entries/', window.location.origin);
+            if (date) url.searchParams.set('date', date);
+            if (user) url.searchParams.set('user', user);
+            if (type) url.searchParams.set('type', type);
+            if (company) url.searchParams.set('company', company);
+            if (page) url.searchParams.set('approved_page', page);
+
+            // Fetch data from Django endpoint
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Update table with entries
+                    entriesTableBody.innerHTML = '';
+                    data.entries.forEach(entry => {
+                        const row = document.createElement('tr');
+                        row.className = 'bg-gray-100';
+
+                        let receiptAmount = '-----';
+                        let paymentAmount = '-----';
+                        
+                        if (entry.entry_type === 'receipt') {
+                            receiptAmount = `${entry.receipts}`;
+                        }
+                        
+                        if (entry.entry_type === 'payment') {
+                            paymentAmount = `${entry.payments}`;
+                        }
+
+                        row.innerHTML = `
+                            <td class="py-2 px-4 border-b">${entry.user}</td>
+                            <td class="py-2 px-4 border-b">${receiptAmount}</td>
+                            <td class="py-2 px-4 border-b">${paymentAmount}</td>
+                            <td class="py-2 px-4 border-b">${entry.date}</td>
+                            <td class="py-2 px-4 border-b">${entry.description}</td>
+                            <td class="py-2 px-4 border-b">${entry.category}</td>
+                            <td class="py-2 px-4 border-b">${entry.subcategory}</td>
+                            <td class="py-2 px-4 border-b">${entry.status}</td>
+                        `;
+                        entriesTableBody.appendChild(row);
+                    });
+
+                    pagination.innerHTML = '';
+                    if (data.has_previous) {
+                        pagination.innerHTML += `<a href="#" data-page="1" class="text-blue-500 hover:text-blue-700">First</a>`;
+                        pagination.innerHTML += `<a href="#" data-page="${data.previous_page_number}" class="text-blue-500 hover:text-blue-700 ml-3">Previous</a>`;
+                    }
+                    for (let num = 1; num <= data.total_pages; num++) {
+                        if (num === data.page_number) {
+                            pagination.innerHTML += `<span class="inline-block py-1 px-2 bg-blue-500 text-white rounded">${num}</span>`;
+                        } else {
+                            pagination.innerHTML += `<a href="#" data-page="${num}" class="inline-block py-1 px-2 text-blue-500 hover:text-blue-700">${num}</a>`;
+                        }
+                    }
+                    if (data.has_next) {
+                        pagination.innerHTML += `<a href="#" data-page="${data.next_page_number}" class="text-blue-500 hover:text-blue-700 mr-3">Next</a>`;
+                        pagination.innerHTML += `<a href="#" data-page="${data.total_pages}" class="text-blue-500 hover:text-blue-700">Last</a>`;
+                    }
+
+                    // Add event listeners to pagination links
+                    document.querySelectorAll('#pagination a').forEach(link => {
+                        link.addEventListener('click', event => {
+                            event.preventDefault();
+                            const page = event.target.getAttribute('data-page');
+                            localStorage.setItem('pageApproved', page);
+                            fetchEntries(company, page);
+                        });
+                    });
+
+                    // Fetch latest exchange rates from Open Exchange Rates API
+                    const apiKey = '5f30749154a44be3ad6a646cacbfab5e'; // Replace with your actual API key
+                    const apiUrl = `https://open.exchangerate-api.com/v6/latest/USD?apiKey=${apiKey}`;
+
+                    const dates = data.dates.map(dateStr => new Date(dateStr));
+                    const receipts = data.receipts;
+                    const payments = data.payments;
+                    const currencies = data.currencies;
+
+                    const datesFormatted = dates.map(dateStr => new Date(dateStr));
+
+                    fetch(apiUrl)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Failed to fetch exchange rates');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            const exchangeRates = data.rates;
+
+                            // Convert receipts and payments to USD using fetched exchange rates
+                            const convertedReceipts = receipts.map((amount, index) => convertToUSD(amount, currencies[index], exchangeRates));
+                            const convertedPayments = payments.map((amount, index) => convertToUSD(amount, currencies[index], exchangeRates));
+
+                            // Define data traces for Plotly chart
+                            const trace1 = {
+                                x: datesFormatted,
+                                y: convertedReceipts,
+                                mode: 'lines+markers',
+                                type: 'scatter',
+                                name: 'Receipts',
+                                line: {color: 'rgba(75, 192, 192, 1)'},
+                                fill: 'tozeroy'
+                            };
+
+                            const trace2 = {
+                                x: datesFormatted,
+                                y: convertedPayments,
+                                mode: 'lines+markers',
+                                type: 'scatter',
+                                name: 'Payments',
+                                line: {color: 'rgba(255, 99, 132, 1)'},
+                                fill: 'tozeroy'
+                            };
+
+                            const dataTraces = [trace1, trace2];
+
+                            // Define layout for Plotly chart
+                            const layout = {
+                                title: 'Receipts and Payments Over Time',
+                                xaxis: {
+                                    title: 'Date',
+                                    tickformat: '%Y-%m-%d',
+                                    automargin: true
+                                },
+                                yaxis: {
+                                    title: 'Amount in $',
+                                    automargin: true
+                                }
+                            };
+
+                            // Render Plotly chart
+                            Plotly.newPlot('time-series-chart', dataTraces, layout);
+                        })
+                        .catch(error => {
+                            console.error('Error fetching exchange rates:', error);
+                        });
+                })
+                .catch(error => {
+                    console.error('There was a problem with the fetch operation:', error);
+                });
+        }
+
+
+        function fetchPendingEntries(company) {
+
+            // Construct URL with query parameters
+            const url = new URL('/entries/filter-pending-entries/', window.location.origin);
+            if (company) url.searchParams.set('company', company)
+
+            // Fetch data from Django endpoint
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Update table with entries
+                    pendingEntriesTable.innerHTML = '';
+                    data.entries.forEach(entry => {
+                        const row = document.createElement('tr');
+                        row.className = 'bg-gray-100';
+
+                        let receiptAmount = '-----';
+                        let paymentAmount = '-----';
+                        
+                        if (entry.entry_type === 'receipt') {
+                            receiptAmount = `${entry.receipts}`;
+                        }
+                        
+                        if (entry.entry_type === 'payment') {
+                            paymentAmount = `${entry.payments}`;
+                        }
+
+                        row.innerHTML = `
+                            <td class="py-2 px-4 border-b">${entry.user}</td>
+                            <td class="py-2 px-4 border-b">${receiptAmount}</td>
+                            <td class="py-2 px-4 border-b">${paymentAmount}</td>
+                            <td class="py-2 px-4 border-b">${entry.date}</td>
+                            <td class="py-2 px-4 border-b">${entry.description}</td>
+                            <td class="py-2 px-4 border-b">${entry.category}</td>
+                            <td class="py-2 px-4 border-b">${entry.subcategory}</td>
+                            <td class="py-2 px-4 border-b">${entry.status}</td>
+                        `;
+                        pendingEntriesTable.appendChild(row);
+                    });
+
+                    // Update pagination links
+                    pendingEntriesPagination.innerHTML = '';
+                    if (data.has_previous) {
+                        pendingEntriesPagination.innerHTML += `<a href="?pending_page=1" class="text-blue-500 hover:text-blue-700">First</a>`;
+                        pendingEntriesPagination.innerHTML += `<a href="?pending_page=${data.previous_page_number}" class="text-blue-500 hover:text-blue-700">Previous</a>`;
+                    }
+                    for (let num = 1; num <= data.num_pages; num++) {
+                        if (num === data.page) {
+                            pendingEntriesPagination.innerHTML += `<span class="inline-block py-1 px-2 bg-blue-500 text-white rounded">${num}</span>`;
+                        } else {
+                            pendingEntriesPagination.innerHTML += `<a href="?pending_page=${num}" class="inline-block py-1 px-2 text-blue-500 hover:text-blue-700">${num}</a>`;
+                        }
+                    }
+                    if (data.has_next) {
+                        pendingEntriesPagination.innerHTML += `<a href="?pending_page=${data.next_page_number}" class="text-blue-500 hover:text-blue-700">Next</a>`;
+                        pendingEntriesPagination.innerHTML += `<a href="?pending_page=${data.num_pages}" class="text-blue-500 hover:text-blue-700">Last</a>`;
+                    }
+
+                })
+                .catch(error => {
+                    console.error('There was a problem with the fetch operation:', error);
+                });
+        }
+
+
+        function fetchRejectedEntries(company) {
+
+            // Construct URL with query parameters
+            const url = new URL('/entries/filter-rejected-entries/', window.location.origin);
+            if (company) url.searchParams.set('company', company)
+            // Fetch data from Django endpoint
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Update table with entries
+                    rejectedEntriesTable.innerHTML = '';
+                    data.entries.forEach(entry => {
+                        const row = document.createElement('tr');
+                        row.className = 'bg-gray-100';
+
+                        let receiptAmount = '-----';
+                        let paymentAmount = '-----';
+                        let actionEdit = '';
+                        let actionResubmit = `<a href="/entries/resubmit-entry/${entry.id}/" class="text-blue-500 hover:text-blue-700 mr-2">resubmit</a>`
+                        let actionDelete = `<a href="/entries/delete-entry/${entry.id}/" class="text-red-500 hover:text-red-700 mr-2">delete</a>`
+
+                        console.log(entry.entry_type, 'entry_type')
+                        
+                        if (entry.entry_type === 'receipt') {
+                            receiptAmount = `${entry.receipts}`;
+                            actionEdit = `<a href="/entries/edit-receipt/${entry.id}/" class="text-blue-500 hover:text-blue-700 mr-2">edit</a>`
+                            
+                        }
+                        
+                        if (entry.entry_type === 'payment') {
+                            paymentAmount = `${entry.payments}`;
+                            actionEdit = `<a href="/entries/edit-payment/${entry.id}/" class="text-blue-500 hover:text-blue-700 mr-2">edit</a>`
+                        }
+
+                        row.innerHTML = `
+                            <td class="py-2 px-4 border-b">${entry.user}</td>
+                            <td class="py-2 px-4 border-b">${receiptAmount}</td>
+                            <td class="py-2 px-4 border-b">${paymentAmount}</td>
+                            <td class="py-2 px-4 border-b">${entry.date}</td>
+                            <td class="py-2 px-4 border-b">${entry.description}</td>
+                            <td class="py-2 px-4 border-b">${entry.category}</td>
+                            <td class="py-2 px-4 border-b">${entry.subcategory}</td>
+                            <td class="py-2 px-4 border-b">${entry.remarks}</td>
+                            <td class="py-2 px-4 border-b">${actionEdit} ${actionResubmit} ${actionDelete}</td>
+                        `;
+                        rejectedEntriesTable.appendChild(row);
+                    });
+
+                    // Update pagination links
+                    rejectedEntriesPagination.innerHTML = '';
+                    if (data.has_previous) {
+                        rejectedEntriesPagination.innerHTML += `<a href="?rejected_page=1" class="text-blue-500 hover:text-blue-700">First</a>`;
+                        rejectedEntriesPagination.innerHTML += `<a href="?rejected_page=${data.previous_page_number}" class="text-blue-500 hover:text-blue-700">Previous</a>`;
+                    }
+                    for (let num = 1; num <= data.num_pages; num++) {
+                        if (num === data.page) {
+                            rejectedEntriesPagination.innerHTML += `<span class="inline-block py-1 px-2 bg-blue-500 text-white rounded">${num}</span>`;
+                        } else {
+                            rejectedEntriesPagination.innerHTML += `<a href="?rejected_page=${num}" class="inline-block py-1 px-2 text-blue-500 hover:text-blue-700">${num}</a>`;
+                        }
+                    }
+                    if (data.has_next) {
+                        rejectedEntriesPagination.innerHTML += `<a href="?rejected_page=${data.next_page_number}" class="text-blue-500 hover:text-blue-700">Next</a>`;
+                        rejectedEntriesPagination.innerHTML += `<a href="?rejected_page=${data.num_pages}" class="text-blue-500 hover:text-blue-700">Last</a>`;
+                    }
+
+                })
+                .catch(error => {
+                    console.error('There was a problem with the fetch operation:', error);
+                });
+        }
+
+
+        function fetchIrregularEntries(company) {
+
+            // Construct URL with query parameters
+            const url = new URL('/entries/filter-irregular-entries/', window.location.origin);
+            if (company) url.searchParams.set('company', company)
+
+            // Fetch data from Django endpoint
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Update table with entries
+                    irregularEntriesTable.innerHTML = '';
+                    data.entries.forEach(entry => {
+                        const row = document.createElement('tr');
+                        row.className = 'bg-gray-100';
+
+                        let receiptAmount = '-----';
+                        let paymentAmount = '-----';
+                        
+                        if (entry.entry_type === 'receipt') {
+                            receiptAmount = `${entry.receipts}`;
+                        }
+                        
+                        if (entry.entry_type === 'payment') {
+                            paymentAmount = `${entry.payments}`;
+                        }
+
+                        row.innerHTML = `
+                            <td class="py-2 px-4 border-b">${entry.user}</td>
+                            <td class="py-2 px-4 border-b">${receiptAmount}</td>
+                            <td class="py-2 px-4 border-b">${paymentAmount}</td>
+                            <td class="py-2 px-4 border-b">${entry.date}</td>
+                            <td class="py-2 px-4 border-b">${entry.description}</td>
+                            <td class="py-2 px-4 border-b">${entry.category}</td>
+                            <td class="py-2 px-4 border-b">${entry.subcategory}</td>
+                            <td class="py-2 px-4 border-b">${entry.status}</td>
+                        `;
+                        irregularEntriesTable.appendChild(row);
+                    });
+
+                    // Update pagination links
+                    irregularEntriesPagination.innerHTML = '';
+                    if (data.has_previous) {
+                        irregularEntriesPagination.innerHTML += `<a href="?irregular_page=1" class="text-blue-500 hover:text-blue-700">First</a>`;
+                        irregularEntriesPagination.innerHTML += `<a href="?irregular_page=${data.previous_page_number}" class="text-blue-500 hover:text-blue-700">Previous</a>`;
+                    }
+                    for (let num = 1; num <= data.num_pages; num++) {
+                        if (num === data.page) {
+                            irregularEntriesPagination.innerHTML += `<span class="inline-block py-1 px-2 bg-blue-500 text-white rounded">${num}</span>`;
+                        } else {
+                            irregularEntriesPagination.innerHTML += `<a href="?irregular_page=${num}" class="inline-block py-1 px-2 text-blue-500 hover:text-blue-700">${num}</a>`;
+                        }
+                    }
+                    if (data.has_next) {
+                        irregularEntriesPagination.innerHTML += `<a href="?irregular_page=${data.next_page_number}" class="text-blue-500 hover:text-blue-700">Next</a>`;
+                        irregularEntriesPagination.innerHTML += `<a href="?irregular_page=${data.num_pages}" class="text-blue-500 hover:text-blue-700">Last</a>`;
+                    }
+
+                })
+                .catch(error => {
+                    console.error('There was a problem with the fetch operation:', error);
+                });
+        }
+
+
+
+        // Event listeners for search and clear buttons
+        searchButton.addEventListener('click', () => {
+            //company declared at the very top
+            fetchEntries(company)
+
+        });
+
+        clearButton.addEventListener('click', () => {
+            dateFilter.value = '';
+            userFilter.value = '';
+            typeFilter.value = '';
+            let approvedPage = localStorage.getItem('pageApproved')
+            if (approvedPage !==''){
+                fetchEntries(company, approvedPage)
+            }else{
+                fetchEntries(company);
+            }
+            
+        });
+
+        function companyChanged(company){
+            let approvedPage = localStorage.getItem('pageApproved')
+            if (approvedPage !== '' && approvedPage !== null){
+                console.log(approvedPage, 'inside if')
+                fetchEntries(company, approvedPage);
+            }else{
+                fetchEntries(company);
+                console.log(approvedPage, 'inside else');
+            }
+            fetchPendingEntries(company);
+            fetchRejectedEntries(company);
+            fetchIrregularEntries(company);
+        }
+    });
+</script>
+
+{% endblock content %}

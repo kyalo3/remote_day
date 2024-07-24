@@ -1,0 +1,869 @@
+{% extends "../base/base.html" %}
+
+{% block title %}manager dash{% endblock title %}
+
+{% block content %}
+<div class="w-11/12 mx-auto py-4 min-h-screen">
+
+    <div class="text-base pb-3 flex justify-between">
+        <div>
+            My companies are:
+            {% for company in request.user.company.all  %}
+            <span class="capitalize font-medium">
+                {{ company }}
+                {% if not forloop.last %}, {% endif %}
+            </span>
+            {% endfor %}
+        </div>
+        <div class="mr-4">
+            <label for="filter-company" class="block text-lg font-medium text-gray-700">Select Company</label>
+            <select id="filter-company" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">
+                <option value="">All Companies</option>
+                {% for company in request.user.company.all  %}
+                <option value="{{ company }}">{{ company }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="w-10/12 mx-auto mt-5" id="time-series-chart"></div>
+
+
+    <!-- Filters -->
+    <div class="flex items-center mb-4">
+        <div class="mr-4">
+            <label for="filter-date" class="block text-lg font-medium text-gray-700">Filter by Date</label>
+            <input type="date" id="filter-date" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">
+        </div>
+        <div class="mr-4">
+            <label for="filter-user" class="block text-lg font-medium text-gray-700">Filter by User</label>
+            <select id="filter-user" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">
+                <option value="">All Users</option>
+                {% for user in users %}
+                <option value="{{ user.id }}">{{ user.email }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mr-4">
+            <label for="filter-type" class="block text-lg font-medium text-gray-700">Filter by Type</label>
+            <select id="filter-type" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">
+                <option value="">All Types</option>
+                <option value="receipt">Receipt</option>
+                <option value="payment">Payment</option>
+            </select>
+        </div>
+        <div class="mr-4 mt-6">
+            <button id="search-button" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Search
+            </button>
+            <button id="clear-button" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                Clear
+            </button>
+        </div>
+    </div>
+    
+
+    <div class="font-medium ml-3 my-3">Approved Entries</div>
+
+     <!-- approved Entries Table -->
+     <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-gray-200">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left">User</th>
+                    <th class="py-2 px-4 border-b text-left">Receipts</th>
+                    <th class="py-2 px-4 border-b text-left">Payments</th>
+                    <th class="py-2 px-4 border-b text-left">Date</th>
+                    <th class="py-2 px-4 border-b text-left">Company</th>
+                    <th class="py-2 px-4 border-b text-left">Description</th>
+                    <th class="py-2 px-4 border-b text-left">Category</th>
+                    <th class="py-2 px-4 border-b text-left">Subcategory</th>
+                    <th class="py-2 px-4 border-b text-left">Status</th>
+                    <th class="py-2 px-4 border-b text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="entries-table-body">
+                {% for entry in approved_entries %}
+                <tr class="{% cycle 'bg-gray-100' 'bg-white' %}">
+                    <td class="py-2 px-4 border-b">{{ entry.user.first_name }}</td>
+                    {% if entry.entry_type == 'receipt' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.receipts }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %}
+                    {% if entry.entry_type == 'payment' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.payments }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %} 
+                    <td class="py-2 px-4 border-b">{{ entry.date }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.company }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.description }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.category }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.subcategory }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.get_entry_status_display }}</td>
+                    <td class="py-2 px-4 border-b">
+                        <a href="{% url 'manager_request_edit' entry.id %}" class="text-blue-500 hover:text-blue-700 mr-2">request to edit</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+
+    <!-- approved entries Pagination -->
+    <div class="mt-4" id="pagination">
+        <span class="text-sm text-gray-500">Page {{ approved_entries.number }} of {{ approved_entries.paginator.num_pages }}</span>
+        <ul class="inline-block ml-4">
+            {% if approved_entries.has_previous %}
+            <li>
+                <a href="?page=1" class="text-blue-500 hover:text-blue-700">First</a>
+            </li>
+            <li>
+                <a href="?page={{ approved_entries.previous_page_number }}" class="text-blue-500 hover:text-blue-700">Previous</a>
+            </li>
+            {% endif %}
+            {% for num in approved_entries.paginator.page_range %}
+            {% if approved_entries.number == num %}
+            <li class="inline-block py-1 px-2 bg-blue-500 text-white rounded">{{ num }}</li>
+            {% else %}
+            <li class="inline-block py-1 px-2">
+                <a href="?page={{ num }}" class="text-blue-500 hover:text-blue-700">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            {% if approved_entries.has_next %}
+            <li>
+                <a href="?page={{ approved_entries.next_page_number }}" class="text-blue-500 hover:text-blue-700">Next</a>
+            </li>
+            <li>
+                <a href="?page={{ approved_entries.paginator.num_pages }}" class="text-blue-500 hover:text-blue-700">Last</a>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+
+
+    <div class="font-medium ml-3 my-3">Edit Allowed Entries</div>
+
+     <!-- Manger Edit Table -->
+     <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-gray-200">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left">User</th>
+                    <th class="py-2 px-4 border-b text-left">Receipts</th>
+                    <th class="py-2 px-4 border-b text-left">Payments</th>
+                    <th class="py-2 px-4 border-b text-left">Date</th>
+                    <th class="py-2 px-4 border-b text-left">Description</th>
+                    <th class="py-2 px-4 border-b text-left">Category</th>
+                    <th class="py-2 px-4 border-b text-left">Subcategory</th>
+                    <th class="py-2 px-4 border-b text-left">Status</th>
+                    <th class="py-2 px-4 border-b text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="manager-entries-table">
+                {% for entry in manager_edit_entries %}
+                <tr class="{% cycle 'bg-gray-100' 'bg-white' %}">
+                    <td class="py-2 px-4 border-b">{{ entry.user.first_name }}</td>
+                    {% if entry.entry_type == 'receipt' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.receipts }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %}
+                    {% if entry.entry_type == 'payment' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.payments }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %} 
+                    <td class="py-2 px-4 border-b">{{ entry.date }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.description }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.category }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.subcategory }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.get_entry_status_display }}</td>
+                    <td class="py-2 px-4 border-b">
+                        {% if entry.entry_status == 'manager_review_requested' %}
+                        <span class="text-blue-500 mr-2">waiting</span>
+                        {% endif %}
+                        {% if entry.entry_status == 'manager_review_granted' %}
+                        <a href="{% url 'edit_entry' entry.id %}" class="text-blue-500 hover:text-blue-700 mr-2">edit</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+
+    <!-- Manager edit Pagination -->
+    <div class="mt-4" id="manager-entries-pagination">
+        <span class="text-sm text-gray-500">Page {{ manager_edit_entries.number }} of {{ manager_edit_entries.paginator.num_pages }}</span>
+        <ul class="inline-block ml-4">
+            {% if manager_edit_entries.has_previous %}
+            <li>
+                <a href="?page=1" class="text-blue-500 hover:text-blue-700">First</a>
+            </li>
+            <li>
+                <a href="?page={{ manager_edit_entries.previous_page_number }}" class="text-blue-500 hover:text-blue-700">Previous</a>
+            </li>
+            {% endif %}
+            {% for num in manager_edit_entries.paginator.page_range %}
+            {% if manager_edit_entries.number == num %}
+            <li class="inline-block py-1 px-2 bg-blue-500 text-white rounded">{{ num }}</li>
+            {% else %}
+            <li class="inline-block py-1 px-2">
+                <a href="?page={{ num }}" class="text-blue-500 hover:text-blue-700">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            {% if manager_edit_entries.has_next %}
+            <li>
+                <a href="?page={{ manager_edit_entries.next_page_number }}" class="text-blue-500 hover:text-blue-700">Next</a>
+            </li>
+            <li>
+                <a href="?page={{ manager_edit_entries.paginator.num_pages }}" class="text-blue-500 hover:text-blue-700">Last</a>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+
+
+
+    <div class="font-medium ml-3 my-3">Pending Entries</div>
+
+     <!-- pending Entries Table -->
+     <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-gray-200">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left">User</th>
+                    <th class="py-2 px-4 border-b text-left">Receipts</th>
+                    <th class="py-2 px-4 border-b text-left">Payments</th>
+                    <th class="py-2 px-4 border-b text-left">Date</th>
+                    <th class="py-2 px-4 border-b text-left">Description</th>
+                    <th class="py-2 px-4 border-b text-left">Category</th>
+                    <th class="py-2 px-4 border-b text-left">Subcategory</th>
+                    <th class="py-2 px-4 border-b text-left">Status</th>
+                    <th class="py-2 px-4 border-b text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="pending-entries-table">
+                {% for entry in pending_entries %}
+                <tr class="{% cycle 'bg-gray-100' 'bg-white' %}">
+                    <td class="py-2 px-4 border-b">{{ entry.user.first_name }}</td>
+                    {% if entry.entry_type == 'receipt' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.receipts }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %}
+                    {% if entry.entry_type == 'payment' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.payments }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %} 
+                    <td class="py-2 px-4 border-b">{{ entry.date }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.company }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.description }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.category }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.subcategory }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.get_entry_status_display }}</td>
+                    <td class="py-2 px-4 border-b">
+                        <a href="{% url 'approve_entry' entry.id %}" class="text-blue-500 hover:text-blue-700 mr-2">Approve</a>
+                        <a href="javascript:void(0);" class="text-red-500 hover:text-red-700" onclick="openRejectModal('{{ entry.id }}')">Reject</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+
+    <!-- approved entries Pagination -->
+    <div class="mt-4" id="pending-entries-pagination">
+        <span class="text-sm text-gray-500">Page {{ pending_entries.number }} of {{ pending_entries.paginator.num_pages }}</span>
+        <ul class="inline-block ml-4">
+            {% if pending_entries.has_previous %}
+            <li>
+                <a href="?page=1" class="text-blue-500 hover:text-blue-700">First</a>
+            </li>
+            <li>
+                <a href="?page={{ pending_entries.previous_page_number }}" class="text-blue-500 hover:text-blue-700">Previous</a>
+            </li>
+            {% endif %}
+            {% for num in pending_entries.paginator.page_range %}
+            {% if pending_entries.number == num %}
+            <li class="inline-block py-1 px-2 bg-blue-500 text-white rounded">{{ num }}</li>
+            {% else %}
+            <li class="inline-block py-1 px-2">
+                <a href="?page={{ num }}" class="text-blue-500 hover:text-blue-700">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            {% if pending_entries.has_next %}
+            <li>
+                <a href="?page={{ pending_entries.next_page_number }}" class="text-blue-500 hover:text-blue-700">Next</a>
+            </li>
+            <li>
+                <a href="?page={{ pending_entries.paginator.num_pages }}" class="text-blue-500 hover:text-blue-700">Last</a>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <!-- Reject Modal -->
+    <div id="rejectModal" class="fixed z-10 inset-0 overflow-y-auto hidden">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+                <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                <div>
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Reject Entry</h3>
+                    <div class="mt-2">
+                        <textarea id="remarks" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg" rows="4" placeholder="Enter remarks"></textarea>
+                    </div>
+                </div>
+                <div class="mt-5 sm:mt-6 flex justify-between">
+                    <button type="button" class="inline-flex justify-center w-1/2 rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:text-sm" onclick="submitReject()">
+                        Reject
+                    </button>
+                    <button type="button" class="inline-flex justify-center w-1/2 ml-2 rounded-md border border-transparent shadow-sm px-4 py-2 bg-gray-600 text-base font-medium text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:text-sm" onclick="closeRejectModal()">
+                        Cancel
+                    </button>
+                </div>
+                <input type="hidden" id="entryId" value="">
+            </div>
+        </div>
+    </div>
+
+
+
+
+</div>
+
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://openexchangerates.github.io/money.js/money.min.js"></script>
+<script>
+    function openRejectModal(entryId) {
+        
+
+        document.getElementById('entryId').value = entryId;
+        document.getElementById('rejectModal').classList.remove('hidden');
+    }
+
+    function closeRejectModal() {
+        document.getElementById('rejectModal').classList.add('hidden');
+        document.getElementById('remarks').value = '';  // Clear the remarks field
+    }
+
+    function submitReject() {
+        var entryId = document.getElementById('entryId').value;
+        var remarks = document.getElementById('remarks').value;
+
+        if (remarks.trim() === '') {
+            alert('Please enter remarks.');
+            return;
+        }
+
+        var form = document.createElement('form');
+        form.method = 'post';
+        form.action = '/entries/reject-entry/' + entryId + '/';
+
+        var csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = 'csrfmiddlewaretoken';
+        csrfToken.value = '{{ csrf_token }}';
+        form.appendChild(csrfToken);
+
+        var remarksInput = document.createElement('input');
+        remarksInput.type = 'hidden';
+        remarksInput.name = 'remarks';
+        remarksInput.value = remarks;
+        form.appendChild(remarksInput);
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+</script>
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchButton = document.getElementById('search-button');
+        const clearButton = document.getElementById('clear-button');
+        const dateFilter = document.getElementById('filter-date');
+        const userFilter = document.getElementById('filter-user');
+        const typeFilter = document.getElementById('filter-type');
+        const companyFilter = document.getElementById('filter-company');
+        const entriesTableBody = document.getElementById('entries-table-body');
+        const pendingEntriesTable = document.getElementById('pending-entries-table');
+        const managerEntriesTable = document.getElementById('manager-entries-table');
+        const pagination = document.getElementById('pagination');
+        const managerEntriesPagination = document.getElementById('manager-entries-pagination');
+        const pendingEntriesPagination = document.getElementById('pending-entries-pagination');
+
+        let company = localStorage.getItem('selectedCompany') || '';
+
+        //reflect company on localStorage to selection dial
+        companyFilter.value = company
+
+        //call on load and reload
+        companyChanged(company);
+
+        companyFilter.addEventListener('change', () => {
+            company = companyFilter.value;
+            localStorage.setItem('selectedCompany', company);
+
+            companyChanged(company);
+        });
+        
+    
+        function fetchEntries(company, page=1) {
+            const date = dateFilter.value;
+            const user = userFilter.value;
+            const type = typeFilter.value;
+
+    
+            const url = new URL(`/entries/filter-approved-entries/`, window.location.origin);
+            if (date) url.searchParams.set('date', date);
+            if (user) url.searchParams.set('user', user);
+            if (type) url.searchParams.set('type', type);
+            console.log(company, 'company')
+            console.log(page, 'page')
+            if (company) url.searchParams.set('company', company);
+            if (page) url.searchParams.set('approved_page', page)
+
+            function convertToUSD(amount, currency, rates) {
+                // Check if the currency exists in the rates object
+                if (rates.hasOwnProperty(currency)) {
+                    // Convert amount to USD using the fetched exchange rate
+                    return amount / rates[currency];
+                } else {
+                    console.error(`Exchange rate not available for currency: ${currency}`);
+                    return amount; // Return the original amount if exchange rate not found
+                }
+            }
+    
+           
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Update table
+                    entriesTableBody.innerHTML = '';
+                    data.entries.forEach(entry => {
+                        const row = document.createElement('tr');
+                        row.className = 'bg-gray-100';
+
+                        let receiptAmount = '-----';
+                        let paymentAmount = '-----';
+
+                        if (entry.entry_type === 'receipt') {
+                            receiptAmount = `${entry.receipts}`;
+                        }
+
+                        if (entry.entry_type === 'payment') {
+                            paymentAmount = `${entry.payments}`;
+                        }
+
+                        row.innerHTML = `
+                            <td class="py-2 px-4 border-b">${entry.user}</td>
+                            <td class="py-2 px-4 border-b">${receiptAmount}</td>
+                            <td class="py-2 px-4 border-b">${paymentAmount}</td>
+                            <td class="py-2 px-4 border-b">${entry.date}</td>
+                            <td class="py-2 px-4 border-b">${entry.company}</td>
+                            <td class="py-2 px-4 border-b">${entry.description}</td>
+                            <td class="py-2 px-4 border-b">${entry.category}</td>
+                            <td class="py-2 px-4 border-b">${entry.subcategory}</td>
+                            <td class="py-2 px-4 border-b">${entry.status}</td>
+                            <td class="py-2 px-4 border-b">
+                                <a href="/entries/manager-request-edit/${entry.id}" class="text-blue-500 hover:text-blue-700 mr-2">request to edit</a>
+                            </td>
+                        `;
+                        entriesTableBody.appendChild(row);
+                    });
+
+                    // Update pagination
+                    pagination.innerHTML = '';
+                    if (data.has_previous) {
+                        pagination.innerHTML += `<a href="#" data-page="1" class="text-blue-500 hover:text-blue-700">First</a>`;
+                        pagination.innerHTML += `<a href="#" data-page="${data.previous_page_number}" class="text-blue-500 hover:text-blue-700 ml-3">Previous</a>`;
+                    }
+                    for (let num = 1; num <= data.total_pages; num++) {
+                        if (num === data.page_number) {
+                            pagination.innerHTML += `<span class="inline-block py-1 px-2 bg-blue-500 text-white rounded">${num}</span>`;
+                        } else {
+                            pagination.innerHTML += `<a href="#" data-page="${num}" class="inline-block py-1 px-2 text-blue-500 hover:text-blue-700">${num}</a>`;
+                        }
+                    }
+                    if (data.has_next) {
+                        pagination.innerHTML += `<a href="#" data-page="${data.next_page_number}" class="text-blue-500 hover:text-blue-700 mr-3">Next</a>`;
+                        pagination.innerHTML += `<a href="#" data-page="${data.total_pages}" class="text-blue-500 hover:text-blue-700">Last</a>`;
+                    }
+
+                    // Add event listeners to pagination links
+                    document.querySelectorAll('#pagination a').forEach(link => {
+                        link.addEventListener('click', event => {
+                            event.preventDefault();
+                            const page = event.target.getAttribute('data-page');
+                            localStorage.setItem('pageApproved', page);
+                            fetchEntries(company, page);
+                        });
+                    });
+         
+                    // Fetch latest exchange rates from Open Exchange Rates API
+                    const apiKey = '5f30749154a44be3ad6a646cacbfab5e'; // Replace with your actual API key
+                    const apiUrl = `https://open.exchangerate-api.com/v6/latest/USD?apiKey=${apiKey}`;
+
+    
+                     // Update graph with currency conversion
+                    const dates = data.dates.map(dateStr => new Date(dateStr));
+                    const receipts = data.receipts;
+                    const payments = data.payments;
+                    const currencies = data.currencies;
+
+                    const datesFormatted = dates.map(dateStr => new Date(dateStr));
+
+                    fetch(apiUrl)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Failed to fetch exchange rates');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            const exchangeRates = data.rates;
+
+                            // Convert receipts and payments to USD using fetched exchange rates
+                            const convertedReceipts = receipts.map((amount, index) => convertToUSD(amount, currencies[index], exchangeRates));
+                            const convertedPayments = payments.map((amount, index) => convertToUSD(amount, currencies[index], exchangeRates));
+
+                            // Define data traces for Plotly chart
+                            const trace1 = {
+                                x: datesFormatted,
+                                y: convertedReceipts,
+                                mode: 'lines+markers',
+                                type: 'scatter',
+                                name: 'Receipts',
+                                line: {color: 'rgba(75, 192, 192, 1)'},
+                                fill: 'tozeroy'
+                            };
+
+                            const trace2 = {
+                                x: datesFormatted,
+                                y: convertedPayments,
+                                mode: 'lines+markers',
+                                type: 'scatter',
+                                name: 'Payments',
+                                line: {color: 'rgba(255, 99, 132, 1)'},
+                                fill: 'tozeroy'
+                            };
+
+                            const dataTraces = [trace1, trace2];
+
+                            // Define layout for Plotly chart
+                            const layout = {
+                                title: 'Receipts and Payments Over Time',
+                                xaxis: {
+                                    title: 'Date',
+                                    tickformat: '%Y-%m-%d',
+                                    automargin: true
+                                },
+                                yaxis: {
+                                    title: 'Amount in $',
+                                    automargin: true
+                                }
+                            };
+
+                            // Render Plotly chart
+                            Plotly.newPlot('time-series-chart', dataTraces, layout);
+                        })
+                        .catch(error => {
+                            console.error('Error fetching exchange rates:', error);
+                        });
+                })
+                .catch(error => {
+                    console.error('There was a problem with the fetch operation:', error);
+                });
+        }
+
+
+        function fetchPendingEntries(company) {
+
+            // Construct URL with query parameters
+            const url = new URL('/entries/filter-pending-entries-manager/', window.location.origin);
+            if (company) url.searchParams.set('company', company)
+
+            // Fetch data from Django endpoint
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Update table with entries
+                    pendingEntriesTable.innerHTML = '';
+                    data.entries.forEach(entry => {
+                        const row = document.createElement('tr');
+                        row.className = 'bg-gray-100';
+
+                        let receiptAmount = '-----';
+                        let paymentAmount = '-----';
+                        
+                        if (entry.entry_type === 'receipt') {
+                            receiptAmount = `${entry.receipts}`;
+                        }
+                        
+                        if (entry.entry_type === 'payment') {
+                            paymentAmount = `${entry.payments}`;
+                        }
+
+                        row.innerHTML = `
+                            <td class="py-2 px-4 border-b">${entry.user}</td>
+                            <td class="py-2 px-4 border-b">${receiptAmount}</td>
+                            <td class="py-2 px-4 border-b">${paymentAmount}</td>
+                            <td class="py-2 px-4 border-b">${entry.date}</td>
+                            <td class="py-2 px-4 border-b">${entry.description}</td>
+                            <td class="py-2 px-4 border-b">${entry.category}</td>
+                            <td class="py-2 px-4 border-b">${entry.subcategory}</td>
+                            <td class="py-2 px-4 border-b">${entry.status}</td>
+                            <td class="py-2 px-4 border-b">
+                                <a href="/entries/approve-entry/${entry.id}" class="text-blue-500 hover:text-blue-700 mr-2">approve</a>
+                                <a href="javascript:void(0);" class="text-red-500 hover:text-red-700" onclick="openRejectModal('${entry.id}')">Reject</a>
+                            </td>
+                        `;
+                        pendingEntriesTable.appendChild(row);
+                    });
+
+                    // Update pagination links
+                    pendingEntriesPagination.innerHTML = '';
+                    if (data.has_previous) {
+                        pendingEntriesPagination.innerHTML += `<a href="?pending_page=1" class="text-blue-500 hover:text-blue-700">First</a>`;
+                        pendingEntriesPagination.innerHTML += `<a href="?pending_page=${data.previous_page_number}" class="text-blue-500 hover:text-blue-700">Previous</a>`;
+                    }
+                    for (let num = 1; num <= data.num_pages; num++) {
+                        if (num === data.page) {
+                            pendingEntriesPagination.innerHTML += `<span class="inline-block py-1 px-2 bg-blue-500 text-white rounded">${num}</span>`;
+                        } else {
+                            pendingEntriesPagination.innerHTML += `<a href="?pending_page=${num}" class="inline-block py-1 px-2 text-blue-500 hover:text-blue-700">${num}</a>`;
+                        }
+                    }
+                    if (data.has_next) {
+                        pendingEntriesPagination.innerHTML += `<a href="?pending_page=${data.next_page_number}" class="text-blue-500 hover:text-blue-700">Next</a>`;
+                        pendingEntriesPagination.innerHTML += `<a href="?pending_page=${data.num_pages}" class="text-blue-500 hover:text-blue-700">Last</a>`;
+                    }
+
+                })
+                .catch(error => {
+                    console.error('There was a problem with the fetch operation:', error);
+                });
+        }
+
+
+        function fetchManagerEntries(company) {
+
+            // Construct URL with query parameters
+            const url = new URL('/entries/filter-manager-entries/', window.location.origin);
+            if (company) url.searchParams.set('company', company)
+
+            // Fetch data from Django endpoint
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Update table with entries
+                    managerEntriesTable.innerHTML = '';
+                    data.entries.forEach(entry => {
+                        const row = document.createElement('tr');
+                        row.className = 'bg-gray-100';
+
+                        let receiptAmount = '-----';
+                        let paymentAmount = '-----';
+                        let action = '';
+                        
+                        if (entry.entry_type === 'receipt') {
+                            receiptAmount = `${entry.receipts}`;
+                        }
+                        
+                        if (entry.entry_type === 'payment') {
+                            paymentAmount = `${entry.payments}`;
+                        }
+
+                        if (entry.entry_status === 'manager_review_requested') {
+                            action = '<span class="text-blue-500  mr-2" >waiting</span>';
+                        } else if (entry.entry_status === 'manager_review_granted' ) {
+                            action = `<a href="/entries/edit-entry/${entry.id}/" class="text-blue-500 hover:text-blue-700 mr-2">edit</a>`
+                        }
+
+                        row.innerHTML = `
+                            <td class="py-2 px-4 border-b">${entry.user}</td>
+                            <td class="py-2 px-4 border-b">${receiptAmount}</td>
+                            <td class="py-2 px-4 border-b">${paymentAmount}</td>
+                            <td class="py-2 px-4 border-b">${entry.date}</td>
+                            <td class="py-2 px-4 border-b">${entry.description}</td>
+                            <td class="py-2 px-4 border-b">${entry.category}</td>
+                            <td class="py-2 px-4 border-b">${entry.subcategory}</td>
+                            <td class="py-2 px-4 border-b">${entry.status}</td>
+                            <td class="py-2 px-4 border-b">${action}</td>
+                        `;
+                        managerEntriesTable.appendChild(row);
+                    });
+
+                    // Update pagination links
+                    managerEntriesPagination.innerHTML = '';
+                    if (data.has_previous) {
+                        managerEntriesPagination.innerHTML += `<a href="?manager_page=1" class="text-blue-500 hover:text-blue-700">First</a>`;
+                        managerEntriesPagination.innerHTML += `<a href="?manager_page=${data.previous_page_number}" class="text-blue-500 hover:text-blue-700">Previous</a>`;
+                    }
+                    for (let num = 1; num <= data.num_pages; num++) {
+                        if (num === data.page) {
+                            managerEntriesPagination.innerHTML += `<span class="inline-block py-1 px-2 bg-blue-500 text-white rounded">${num}</span>`;
+                        } else {
+                            managerEntriesPagination.innerHTML += `<a href="?manager_page=${num}" class="inline-block py-1 px-2 text-blue-500 hover:text-blue-700">${num}</a>`;
+                        }
+                    }
+                    if (data.has_next) {
+                        managerEntriesPagination.innerHTML += `<a href="?manager_page=${data.next_page_number}" class="text-blue-500 hover:text-blue-700">Next</a>`;
+                        managerEntriesPagination.innerHTML += `<a href="?manager_page=${data.num_pages}" class="text-blue-500 hover:text-blue-700">Last</a>`;
+                    }
+
+                })
+                .catch(error => {
+                    console.error('There was a problem with the fetch operation:', error);
+                });
+        }
+    
+        searchButton.addEventListener('click', () => {
+            fetchEntries(company);
+        });
+
+        clearButton.addEventListener('click', () => {
+            dateFilter.value = '';
+            userFilter.value = '';
+            typeFilter.value = '';
+            let approvedPage = localStorage.getItem('pageApproved')
+            if (approvedPage !==''){
+                fetchEntries(company, approvedPage)
+            }else{
+                fetchEntries(company);
+            }
+        });
+    
+        function companyChanged(company){
+            let approvedPage = localStorage.getItem('pageApproved')
+            if (approvedPage !== '' && approvedPage !== null){
+                fetchEntries(company, approvedPage);
+            }else{
+                fetchEntries(company);
+            }
+            fetchPendingEntries(company);
+            fetchManagerEntries(company);
+        }
+    });
+    
+</script>
+
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function () {
+        // Set base currency for fx library
+        fx.base = "USD";
+    
+        // Function to convert amounts to USD using fetched exchange rates
+        function convertToUSD(amount, currency, rates) {
+            // Check if the currency exists in the rates object
+            if (rates.hasOwnProperty(currency)) {
+                // Convert amount to USD using the fetched exchange rate
+                return amount / rates[currency];
+            } else {
+                console.error(`Exchange rate not available for currency: ${currency}`);
+                return amount; // Return the original amount if exchange rate not found
+            }
+        }
+    
+        // Data from Django template context
+        const dates = {{ dates|safe }};
+        let receipts = {{ receipts|safe }};
+        let payments = {{ payments|safe }};
+        const currencies = {{ currencies|safe }}; // Get the currency of each entry
+    
+        // Convert dates to JavaScript Date objects
+        const datesFormatted = dates.map(dateStr => new Date(dateStr));
+    
+        // Fetch latest exchange rates from Open Exchange Rates API
+        const apiKey = '803f4a7d03cd456c8f76d44af394080b';  // Replace with your actual API key
+        const apiUrl = `https://open.exchangerate-api.com/v6/latest/${fx.base}?apiKey=${apiKey}`;
+    
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch exchange rates');
+                }
+                return response.json();
+            })
+            .then(data => {
+                const exchangeRates = data.rates;
+    
+                // Convert all entries to USD using fetched exchange rates
+                receipts = receipts.map((amount, index) => convertToUSD(amount, currencies[index], exchangeRates));
+                payments = payments.map((amount, index) => convertToUSD(amount, currencies[index], exchangeRates));
+
+                console.log(receipts, payments)
+    
+                // Define data traces
+                const trace1 = {
+                    x: datesFormatted,
+                    y: receipts,
+                    mode: 'lines+markers',
+                    type: 'scatter',
+                    name: 'Receipts',
+                    line: {color: 'rgba(75, 192, 192, 1)'},
+                    fill: 'tozeroy'
+                };
+    
+                const trace2 = {
+                    x: datesFormatted,
+                    y: payments,
+                    mode: 'lines+markers',
+                    type: 'scatter',
+                    name: 'Payments',
+                    line: {color: 'rgba(255, 99, 132, 1)'},
+                    fill: 'tozeroy'
+                };
+    
+                const data_new = [trace1, trace2];
+    
+                // Define layout options
+                const layout = {
+                    title: 'Receipts and Payments Over Time',
+                    xaxis: {
+                        title: 'Date',
+                        tickformat: '%Y-%m-%d',
+                        automargin: true
+                    },
+                    yaxis: {
+                        title: 'Amount in $',
+                        automargin: true
+                    }
+                };
+    
+                // Render Plotly.js chart
+                Plotly.newPlot('time-series-chart', data_new, layout);
+            })
+            .catch(error => {
+                console.error('Error fetching exchange rates:', error);
+            });
+    });
+</script>
+{% endblock content %}

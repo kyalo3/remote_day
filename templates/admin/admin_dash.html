@@ -1,0 +1,1061 @@
+{% extends "../base/base.html" %}
+
+{% block title %}all users{% endblock title %}
+
+{% block content %}
+<div class="w-11/12 mx-auto py-4 min-h-screen">
+    <div class="font-medium ml-3 mb-3">All users</div>
+
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-gray-200">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left">Name</th>
+                    <th class="py-2 px-4 border-b text-left">Email</th>
+                    <th class="py-2 px-4 border-b text-left">Role</th>
+                    <th class="py-2 px-4 border-b text-left">Managers</th>
+                    <th class="py-2 px-4 border-b text-left">Companies</th>
+                    <th class="py-2 px-4 border-b text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr class="{% cycle 'bg-gray-100' 'bg-white' %}">
+                    <td class="py-2 px-4 border-b flex justify-between mx-auto w-1/2 text-left"><span>{{ user.first_name }}</span>&nbsp; <span>{{ user.last_name }}</span></td>
+                    <td class="py-2 px-4 border-b">{{ user.email }}</td>
+                    <td class="py-2 px-4 border-b">{{ user.role }}</td>
+                    <td class="py-2 px-4 border-b">
+                        {% for manager in user.managers.all %}
+                        {{ manager.email }}
+                        {% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </td>
+                    <td class="py-2 px-4 border-b">
+                        {% for company in user.company.all %}
+                            {{ company.name }}
+                            {% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </td>
+                    
+                    <td class="py-2 px-4 border-b">
+                        {% comment %} don't allow user to edit themselves {% endcomment %}
+                        {% if not user.id == request.user.id %}
+                        <a href="{% url 'edit_user' user.id %}" class="text-blue-500 hover:text-blue-700 mr-2">Edit</a>
+                        <a href="{% url 'delete_user' user.id %}" class="text-red-500 hover:text-red-700">Delete</a>
+                        {% endif %}
+                    </td>
+                    
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Pagination for Users -->
+        {% if users.has_other_pages %}
+        <div class="mt-4">
+            <span class="text-sm text-gray-500">Page {{ users.number }} of {{ users.paginator.num_pages }}</span>
+            <ul class="inline-block ml-4">
+                {% if users.has_previous %}
+                <li>
+                    <a href="?user_page=1" class="text-blue-500 hover:text-blue-700">First</a>
+                </li>
+                <li>
+                    <a href="?user_page={{ users.previous_page_number }}" class="text-blue-500 hover:text-blue-700">Previous</a>
+                </li>
+                {% endif %}
+                {% for num in users.paginator.page_range %}
+                {% if users.number == num %}
+                <li class="inline-block py-1 px-2 bg-blue-500 text-white rounded">{{ num }}</li>
+                {% else %}
+                <li class="inline-block py-1 px-2">
+                    <a href="?user_page={{ num }}" class="text-blue-500 hover:text-blue-700">{{ num }}</a>
+                </li>
+                {% endif %}
+                {% endfor %}
+                {% if users.has_next %}
+                <li>
+                    <a href="?user_page={{ users.next_page_number }}" class="text-blue-500 hover:text-blue-700">Next</a>
+                </li>
+                <li>
+                    <a href="?user_page={{ users.paginator.num_pages }}" class="text-blue-500 hover:text-blue-700">Last</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="lg:text-end text-center lg:mr-10 lg:mt-10">
+        
+        <a id="create-user-btn" href="{% if companies %}{% url 'register' %}{% else %}#{% endif %}" 
+        class="inline-block px-4 md:px-6 py-1 md:py-2 text-white bg-blue-500 rounded hover:bg-blue-500 focus:outline-none focus:bg-blue-500"
+        data-companies-exist="{% if companies %}true{% else %}false{% endif %}"
+        >
+            Create User
+        </a>
+    </div>
+
+
+    <div class="font-medium ml-3 mb-3">All companies</div>
+
+    <div class="overflow-x-auto mt-8">
+        <table class="min-w-full bg-white border border-gray-200">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left">Name</th>
+                    <th class="py-2 px-4 border-b text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for company in companies %}
+                <tr class="{% cycle 'bg-gray-100' 'bg-white' %}">
+                    <td class="py-2 px-4 border-b mx-auto w-1/2 text-left"><span>{{ company.name }}</span></td>
+                    <td class="py-2 px-4 border-b">
+                        <a href="{% url 'edit_company' company.id %}" class="text-blue-500 hover:text-blue-700 mr-2">Edit</a>
+                        <a href="{% url 'delete_company' company.id %}" class="text-red-500 hover:text-red-700">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Pagination for Companies -->
+        {% if companies.has_other_pages %}
+        <div class="mt-4">
+            <span class="text-sm text-gray-500">Page {{ companies.number }} of {{ companies.paginator.num_pages }}</span>
+            <ul class="inline-block ml-4">
+                {% if companies.has_previous %}
+                <li>
+                    <a href="?company_page=1" class="text-blue-500 hover:text-blue-700">First</a>
+                </li>
+                <li>
+                    <a href="?company_page={{ companies.previous_page_number }}" class="text-blue-500 hover:text-blue-700">Previous</a>
+                </li>
+                {% endif %}
+                {% for num in companies.paginator.page_range %}
+                {% if companies.number == num %}
+                <li class="inline-block py-1 px-2 bg-blue-500 text-white rounded">{{ num }}</li>
+                {% else %}
+                <li class="inline-block py-1 px-2">
+                    <a href="?company_page={{ num }}" class="text-blue-500 hover:text-blue-700">{{ num }}</a>
+                </li>
+                {% endif %}
+                {% endfor %}
+                {% if companies.has_next %}
+                <li>
+                    <a href="?company_page={{ companies.next_page_number }}" class="text-blue-500 hover:text-blue-700">Next</a>
+                </li>
+                <li>
+                    <a href="?company_page={{ companies.paginator.num_pages }}" class="text-blue-500 hover:text-blue-700">Last</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="lg:text-end text-center lg:mr-10 lg:mt-10">
+        <a href="{% url 'create_company' %}" class="inline-block px-4 md:px-6 py-1 md:py-2 text-white bg-blue-500 rounded hover:bg-blue-500 focus:outline-none focus:bg-blue-500">
+            Create Company
+        </a>
+    </div>
+
+    <div class="font-medium ml-3 mb-3">All categories</div>
+
+    <div class="overflow-x-auto mt-8">
+        <table class="min-w-full bg-white border border-gray-200">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left">Name</th>
+                    <th class="py-2 px-4 border-b text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for category in categories %}
+                <tr class="{% cycle 'bg-gray-100' 'bg-white' %}">
+                    <td class="py-2 px-4 border-b mx-auto w-1/2 text-left"><span>{{ category.name }}</span></td>
+                    <td class="py-2 px-4 border-b">
+                        <a href="{% url 'edit_category' category.id %}" class="text-blue-500 hover:text-blue-700 mr-2">Edit</a>
+                        <a href="{% url 'delete_category' category.id %}" class="text-red-500 hover:text-red-700">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Pagination for Companies -->
+        {% if categories.has_other_pages %}
+        <div class="mt-4">
+            <span class="text-sm text-gray-500">Page {{ categories.number }} of {{ categories.paginator.num_pages }}</span>
+            <ul class="inline-block ml-4">
+                {% if categories.has_previous %}
+                <li>
+                    <a href="?category_page=1" class="text-blue-500 hover:text-blue-700">First</a>
+                </li>
+                <li>
+                    <a href="?category_page={{ categories.previous_page_number }}" class="text-blue-500 hover:text-blue-700">Previous</a>
+                </li>
+                {% endif %}
+                {% for num in categories.paginator.page_range %}
+                {% if categories.number == num %}
+                <li class="inline-block py-1 px-2 bg-blue-500 text-white rounded">{{ num }}</li>
+                {% else %}
+                <li class="inline-block py-1 px-2">
+                    <a href="?category_page={{ num }}" class="text-blue-500 hover:text-blue-700">{{ num }}</a>
+                </li>
+                {% endif %}
+                {% endfor %}
+                {% if categories.has_next %}
+                <li>
+                    <a href="?category_page={{ categories.next_page_number }}" class="text-blue-500 hover:text-blue-700">Next</a>
+                </li>
+                <li>
+                    <a href="?category_page={{ categories.paginator.num_pages }}" class="text-blue-500 hover:text-blue-700">Last</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="lg:text-end text-center lg:mr-10 lg:mt-10">
+        <a href="{% url 'create_category' %}" class="inline-block px-4 md:px-6 py-1 md:py-2 text-white bg-blue-500 rounded hover:bg-blue-500 focus:outline-none focus:bg-blue-500">
+            Create Category
+        </a>
+    </div>
+
+    <div class="font-medium ml-3 mb-3">All subcategories</div>
+
+    <div class="overflow-x-auto mt-8">
+        <table class="min-w-full bg-white border border-gray-200">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left">Name</th>
+                    <th class="py-2 px-4 border-b text-left">Category</th>
+                    <th class="py-2 px-4 border-b text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for subcategory in subcategories %}
+                <tr class="{% cycle 'bg-gray-100' 'bg-white' %}">
+                    <td class="py-2 px-4 border-b mx-auto w-1/2 text-left"><span>{{ subcategory.name }}</span></td>
+                    <td class="py-2 px-4 border-b mx-auto w-1/2 text-left"><span>{{ subcategory.category }}</span></td>
+                    <td class="py-2 px-4 border-b flex">
+                        <a href="{% url 'edit_subcategory' subcategory.id %}" class="text-blue-500 hover:text-blue-700 mr-2">Edit</a>
+                        <a href="{% url 'delete_subcategory' subcategory.id %}" class="text-red-500 hover:text-red-700">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Pagination for subcategories -->
+        {% if subcategories.has_other_pages %}
+        <div class="mt-4">
+            <span class="text-sm text-gray-500">Page {{ subcategories.number }} of {{ subcategories.paginator.num_pages }}</span>
+            <ul class="inline-block ml-4">
+                {% if subcategories.has_previous %}
+                <li>
+                    <a href="?subcategory_page=1" class="text-blue-500 hover:text-blue-700">First</a>
+                </li>
+                <li>
+                    <a href="?subcategory_page={{ subcategories.previous_page_number }}" class="text-blue-500 hover:text-blue-700">Previous</a>
+                </li>
+                {% endif %}
+                {% for num in subcategories.paginator.page_range %}
+                {% if subcategories.number == num %}
+                <li class="inline-block py-1 px-2 bg-blue-500 text-white rounded">{{ num }}</li>
+                {% else %}
+                <li class="inline-block py-1 px-2">
+                    <a href="?subcategory_page={{ num }}" class="text-blue-500 hover:text-blue-700">{{ num }}</a>
+                </li>
+                {% endif %}
+                {% endfor %}
+                {% if subcategories.has_next %}
+                <li>
+                    <a href="?subcategory_page={{ subcategories.next_page_number }}" class="text-blue-500 hover:text-blue-700">Next</a>
+                </li>
+                <li>
+                    <a href="?subcategory_page={{ subcategories.paginator.num_pages }}" class="text-blue-500 hover:text-blue-700">Last</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="lg:text-end text-center lg:mr-10 lg:mt-10">
+        <a id='create-subcategory-btn' href="{% if categories %}{% url 'create_subcategory' %}{% else %}#{% endif %}" 
+        class="inline-block px-4 md:px-6 py-1 md:py-2 text-white bg-blue-500 rounded hover:bg-blue-500 focus:outline-none focus:bg-blue-500"
+        categories-exist="{% if categories %}true {% else %}false{% endif %}"
+        >
+            Create Subcategory
+        </a>
+    </div>
+
+    <div class="w-10/12 mx-auto mt-5" id="time-series-chart"></div>
+
+
+    <!-- Filters -->
+    <div class="flex items-center my-4">
+        <div class="mr-4">
+            <label for="filter-date" class="block text-lg font-medium text-gray-700">Filter by Date</label>
+            <input type="date" id="filter-date" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">
+        </div>
+        <div class="mr-4">
+            <label for="filter-company" class="block text-lg font-medium text-gray-700">Filter by Company</label>
+            <select id="filter-company" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">
+                <option value="">All Companies</option>
+                {% for company in companies %}
+                <option value="{{ company.id }}">{{ company.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mr-4">
+            <label for="filter-user" class="block text-lg font-medium text-gray-700">Filter by User</label>
+            <select id="filter-user" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">
+                <option value="">All Users</option>
+                {% for user in users %}
+                <option value="{{ user.id }}">{{ user.email }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mr-4">
+            <label for="filter-type" class="block text-lg font-medium text-gray-700">Filter by Type</label>
+            <select id="filter-type" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">
+                <option value="">All Types</option>
+                <option value="receipt">Receipt</option>
+                <option value="payment">Payment</option>
+            </select>
+        </div>
+        <div class="mr-4 mt-6">
+            <button id="search-button" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Search
+            </button>
+            <button id="clear-button" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                Clear
+            </button>
+        </div>
+    </div>
+
+
+    <div class="font-medium ml-3 my-3">Approved Entries</div>
+
+     <!-- excel Entries Table -->
+     <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-gray-200">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left">User</th>
+                    <th class="py-2 px-4 border-b text-left">Receipts</th>
+                    <th class="py-2 px-4 border-b text-left">Payments</th>
+                    <th class="py-2 px-4 border-b text-left">Date</th>
+                    <th class="py-2 px-4 border-b text-left">Company</th>
+                    <th class="py-2 px-4 border-b text-left">Description</th>
+                    <th class="py-2 px-4 border-b text-left">Category</th>
+                    <th class="py-2 px-4 border-b text-left">Subcategory</th>
+                    <th class="py-2 px-4 border-b text-left">Status</th>
+                    <th class="py-2 px-4 border-b text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="entries-table-body">
+                {% for entry in approved_entries %}
+                <tr class="{% cycle 'bg-gray-100' 'bg-white' %}">
+                    <td class="py-2 px-4 border-b">{{ entry.user.first_name }}</td>
+                    {% if entry.entry_type == 'receipt' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.receipts }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %}
+                    {% if entry.entry_type == 'payment' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.payments }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %}
+                    <td class="py-2 px-4 border-b">{{ entry.date }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.company }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.description }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.category }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.subcategory }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.get_entry_status_display }}</td>
+                    <td class="py-2 px-4 border-b">
+                        {% if entry.entry_type == 'receipt' %}
+                        <a href="{% url 'edit_receipt' entry.id %}" class="text-blue-500 hover:text-blue-700 mr-2">Edit</a>
+                        {% elif entry.entry_type == 'payment' %}
+                        <a href="{% url 'edit_payment' entry.id %}" class="text-blue-500 hover:text-blue-700 mr-2">Edit</a>
+                        {% endif %}
+                    </td>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+
+    <!-- approved entries Pagination -->
+    <div class="mt-4" id="pagination">
+        <span class="text-sm text-gray-500">Page {{ approved_entries.number }} of {{ approved_entries.paginator.num_pages }}</span>
+        <ul class="inline-block ml-4">
+            {% if approved_entries.has_previous %}
+            <li class="inline-block">
+                <a href="?approved_page=1" class="text-blue-500 hover:text-blue-700">First</a>
+            </li>
+            <li class="inline-block">
+                <a href="?approved_page={{ approved_entries.previous_page_number }}" class="text-blue-500 hover:text-blue-700">Previous</a>
+            </li>
+            {% endif %}
+            {% for num in approved_entries.paginator.page_range %}
+            {% if approved_entries.number == num %}
+            <li class="inline-block py-1 px-2 bg-blue-500 text-white rounded">{{ num }}</li>
+            {% else %}
+            <li class="inline-block py-1 px-2">
+                <a href="?approved_page={{ num }}" class="text-blue-500 hover:text-blue-700">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            {% if approved_entries.has_next %}
+            <li class="inline-block">
+                <a href="?approved_page={{ approved_entries.next_page_number }}" class="text-blue-500 hover:text-blue-700">Next</a>
+            </li>
+            <li class="inline-block">
+                <a href="?approved_page={{ approved_entries.paginator.num_pages }}" class="text-blue-500 hover:text-blue-700">Last</a>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+    
+
+
+
+    <div class="font-medium ml-3 my-3">Large Entries to be approved</div>
+
+     <!-- excel Entries Table -->
+     <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-gray-200">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left">User</th>
+                    <th class="py-2 px-4 border-b text-left">Receipts</th>
+                    <th class="py-2 px-4 border-b text-left">Payments</th>
+                    <th class="py-2 px-4 border-b text-left">Date</th>
+                    <th class="py-2 px-4 border-b text-left">Company</th>
+                    <th class="py-2 px-4 border-b text-left">Description</th>
+                    <th class="py-2 px-4 border-b text-left">Category</th>
+                    <th class="py-2 px-4 border-b text-left">Subcategory</th>
+                    <th class="py-2 px-4 border-b text-left">Status</th>
+                    <th class="py-2 px-4 border-b text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in irregular_entries %}
+                <tr class="{% cycle 'bg-gray-100' 'bg-white' %}">
+                    <td class="py-2 px-4 border-b">{{ entry.user.first_name }}</td>
+                    {% if entry.entry_type == 'receipt' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.receipts }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %}
+                    {% if entry.entry_type == 'payment' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.payments }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %}
+                    <td class="py-2 px-4 border-b">{{ entry.date }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.company }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.description }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.category }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.subcategory }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.get_entry_status_display }}</td>
+                    <td class="py-2 px-4 border-b">
+                        <a href="{% url 'approve_irregular_entry' entry.id %}" class="text-blue-500 hover:text-blue-700 mr-2">Approve</a>
+                        <a href="javascript:void(0);" class="text-red-500 hover:text-red-700" onclick="openRejectModal('{{ entry.id }}')">Reject</a>
+                    </td>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+
+    <!-- irregular entries Pagination -->
+    <div class="mt-4 flex items-center">
+        <span class="text-sm text-gray-500">Page {{ irregular_entries.number }} of {{ irregular_entries.paginator.num_pages }}</span>
+        <ul class="flex ml-4 items-center">
+            {% if irregular_entries.has_previous %}
+            <li>
+                <a href="?irregular_page=1" class="text-blue-500 hover:text-blue-700 mr-1">First</a>
+            </li>
+            <li>
+                <a href="?irregular_page={{ irregular_entries.previous_page_number }}" class="text-blue-500 hover:text-blue-700">Previous</a>
+            </li>
+            {% endif %}
+            {% for num in irregular_entries.paginator.page_range %}
+            {% if irregular_entries.number == num %}
+            <li class="inline-block py-1 px-2 bg-blue-500 text-white rounded">{{ num }}</li>
+            {% else %}
+            <li class="inline-block py-1 px-2">
+                <a href="?irregular_page={{ num }}" class="text-blue-500 hover:text-blue-700">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            {% if irregular_entries.has_next %}
+            <li>
+                <a href="?irregular_page={{ irregular_entries.next_page_number }}" class="text-blue-500 hover:text-blue-700 mr-1">Next</a>
+            </li>
+            <li>
+                <a href="?irregular_page={{ irregular_entries.paginator.num_pages }}" class="text-blue-500 hover:text-blue-700">Last</a>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+
+
+    <div class="font-medium ml-3 my-3">Records Managers want to modify</div>
+
+     <!-- excel Entries Table -->
+     <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-gray-200">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left">User</th>
+                    <th class="py-2 px-4 border-b text-left">Receipts</th>
+                    <th class="py-2 px-4 border-b text-left">Payments</th>
+                    <th class="py-2 px-4 border-b text-left">Date</th>
+                    <th class="py-2 px-4 border-b text-left">Company</th>
+                    <th class="py-2 px-4 border-b text-left">Description</th>
+                    <th class="py-2 px-4 border-b text-left">Category</th>
+                    <th class="py-2 px-4 border-b text-left">Subcategory</th>
+                    <th class="py-2 px-4 border-b text-left">Status</th>
+                    <th class="py-2 px-4 border-b text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in manager_review_entries %}
+                <tr class="{% cycle 'bg-gray-100' 'bg-white' %}">
+                    <td class="py-2 px-4 border-b">{{ entry.user.first_name }}</td>
+                    {% if entry.entry_type == 'receipt' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.receipts }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %}
+                    {% if entry.entry_type == 'payment' %}
+                    <td class="py-2 px-4 border-b">{{ entry.currency }}.{{ entry.payments }}</td>
+                    {% else %}
+                    <td class="py-2 px-4 border-b">-----</td>
+                    {% endif %}
+                    <td class="py-2 px-4 border-b">{{ entry.date }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.company }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.description }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.category }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.subcategory }}</td>
+                    <td class="py-2 px-4 border-b">{{ entry.get_entry_status_display }}</td>
+                    <td class="py-2 px-4 border-b">
+                        <a href="{% url 'approve_manager_review' entry.id %}" class="text-blue-500 hover:text-blue-700 mr-2">Approve</a>
+                        <a href="{% url 'reject_manager_review' entry.id %}" class="text-red-500 hover:text-red-700">Reject</a>
+                    </td>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+
+    <!-- manager entries Pagination -->
+    <div class="mt-4 flex items-center">
+        <span class="text-sm text-gray-500">Page {{ manager_review_entries.number }} of {{ manager_review_entries.paginator.num_pages }}</span>
+        <ul class="flex ml-4 items-center">
+            {% if manager_review_entries.has_previous %}
+            <li>
+                <a href="?manager_page=1" class="text-blue-500 hover:text-blue-700">First</a>
+            </li>
+            <li>
+                <a href="?manager_page={{ manager_review_entries.previous_page_number }}" class="text-blue-500 hover:text-blue-700">Previous</a>
+            </li>
+            {% endif %}
+            {% for num in manager_review_entries.paginator.page_range %}
+            {% if manager_review_entries.number == num %}
+            <li class="inline-block py-1 px-2 bg-blue-500 text-white rounded">{{ num }}</li>
+            {% else %}
+            <li class="inline-block py-1 px-2">
+                <a href="?manager_page={{ num }}" class="text-blue-500 hover:text-blue-700">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            {% if manager_review_entries.has_next %}
+            <li>
+                <a href="?manager_page={{ manager_review_entries.next_page_number }}" class="text-blue-500 hover:text-blue-700">Next</a>
+            </li>
+            <li>
+                <a href="?manager_page={{ manager_review_entries.paginator.num_pages }}" class="text-blue-500 hover:text-blue-700">Last</a>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+
+
+    <!-- Excel Reject Modal  -->
+    <div id="rejectModal" class="fixed z-10 inset-0 overflow-y-auto hidden">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+                <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                <div>
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Reject Entry</h3>
+                    <div class="mt-2">
+                        <textarea id="remarks" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg" rows="4" placeholder="Enter remarks"></textarea>
+                    </div>
+                </div>
+                <div class="mt-5 sm:mt-6 flex justify-between">
+                    <button type="button" class="inline-flex justify-center w-1/2 rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:text-sm" onclick="submitReject()">
+                        Reject
+                    </button>
+                    <button type="button" class="inline-flex justify-center w-1/2 ml-2 rounded-md border border-transparent shadow-sm px-4 py-2 bg-gray-600 text-base font-medium text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:text-sm" onclick="closeRejectModal()">
+                        Cancel
+                    </button>
+                </div>
+                <input type="hidden" id="entryId" value="">
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://openexchangerates.github.io/money.js/money.min.js"></script>
+<script>
+    function openRejectModal(entryId) {
+        document.getElementById('entryId').value = entryId;
+        document.getElementById('rejectModal').classList.remove('hidden');
+        
+    }
+
+    function closeRejectModal() {
+        document.getElementById('rejectModal').classList.add('hidden');
+        document.getElementById('remarks').value = '';  // Clear the remarks field
+    }
+
+    
+    function submitReject() {
+        var entryId = document.getElementById('entryId').value;
+        var remarks = document.getElementById('remarks').value;
+
+        if (remarks.trim() === '') {
+            alert('Please enter remarks.');
+            return;
+        }
+
+        var form = document.createElement('form');
+        form.method = 'post';
+        form.action = '/entries/reject-irregular-entry/' + entryId + '/';
+
+        var csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = 'csrfmiddlewaretoken';
+        csrfToken.value = '{{ csrf_token }}';
+        form.appendChild(csrfToken);
+
+        var remarksInput = document.createElement('input');
+        remarksInput.type = 'hidden';
+        remarksInput.name = 'remarks';
+        remarksInput.value = remarks;
+        form.appendChild(remarksInput);
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+</script>
+
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function () {
+        // Set base currency for fx library
+        fx.base = "USD";
+    
+        // Function to convert amounts to USD using fetched exchange rates
+        function convertToUSD(amount, currency, rates) {
+            // Check if the currency exists in the rates object
+            if (rates.hasOwnProperty(currency)) {
+                // Convert amount to USD using the fetched exchange rate
+                return amount / rates[currency];
+            } else {
+                console.error(`Exchange rate not available for currency: ${currency}`);
+                return amount; // Return the original amount if exchange rate not found
+            }
+        }
+    
+        // Data from Django template context
+        const dates = {{ dates|safe }};
+        let receipts = {{ receipts|safe }};
+        let payments = {{ payments|safe }};
+        const currencies = {{ currencies|safe }}; // Get the currency of each entry
+    
+        // Convert dates to JavaScript Date objects
+        const datesFormatted = dates.map(dateStr => new Date(dateStr));
+    
+        // Fetch latest exchange rates from Open Exchange Rates API
+        const apiKey = '803f4a7d03cd456c8f76d44af394080b';  // Replace with your actual API key
+        const apiUrl = `https://open.exchangerate-api.com/v6/latest/${fx.base}?apiKey=${apiKey}`;
+    
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch exchange rates');
+                }
+                return response.json();
+            })
+            .then(data => {
+                const exchangeRates = data.rates;
+    
+                // Convert all entries to USD using fetched exchange rates
+                receipts = receipts.map((amount, index) => convertToUSD(amount, currencies[index], exchangeRates));
+                payments = payments.map((amount, index) => convertToUSD(amount, currencies[index], exchangeRates));
+
+                console.log(receipts, payments)
+    
+                // Define data traces
+                const trace1 = {
+                    x: datesFormatted,
+                    y: receipts,
+                    mode: 'lines+markers',
+                    type: 'scatter',
+                    name: 'Receipts',
+                    line: {color: 'rgba(75, 192, 192, 1)'},
+                    fill: 'tozeroy'
+                };
+    
+                const trace2 = {
+                    x: datesFormatted,
+                    y: payments,
+                    mode: 'lines+markers',
+                    type: 'scatter',
+                    name: 'Payments',
+                    line: {color: 'rgba(255, 99, 132, 1)'},
+                    fill: 'tozeroy'
+                };
+    
+                const data_new = [trace1, trace2];
+    
+                // Define layout options
+                const layout = {
+                    title: 'Receipts and Payments Over Time',
+                    xaxis: {
+                        title: 'Date',
+                        tickformat: '%Y-%m-%d',
+                        automargin: true
+                    },
+                    yaxis: {
+                        title: 'Amount in $',
+                        automargin: true
+                    }
+                };
+    
+                // Render Plotly.js chart
+                Plotly.newPlot('time-series-chart', data_new, layout);
+            })
+            .catch(error => {
+                console.error('Error fetching exchange rates:', error);
+            });
+    });
+</script>
+
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchButton = document.getElementById('search-button');
+        const clearButton = document.getElementById('clear-button');
+        const dateFilter = document.getElementById('filter-date');
+        const companyFilter = document.getElementById('filter-company');
+        const userFilter = document.getElementById('filter-user');
+        const typeFilter = document.getElementById('filter-type');
+        const entriesTableBody = document.getElementById('entries-table-body');
+        const pagination = document.getElementById('pagination');
+        const createUserBtn = document.getElementById('create-user-btn');
+        const createSubcategoryBtn = document.getElementById('create-subcategory-btn');
+
+        let company = '';
+        companyFilter.addEventListener('change', () => {
+            company = companyFilter.value;
+
+            if (company !== ''){
+                filterAccountants(company);
+            }else{
+                allAccountants();
+            }
+            
+        });
+
+        createUserBtn.addEventListener('click', function(event){
+            if (createUserBtn.getAttribute('data-companies-exist') === 'false') {
+                event.preventDefault();
+                alert('Create a company first');
+            }
+        });
+
+        createSubcategoryBtn.addEventListener('click', function(event){
+            if (createSubcategoryBtn.getAttribute('categories-exist') === 'false') {
+                event.preventDefault();
+                alert('Create a Category first');
+            }
+        });
+
+        function allAccountants(){
+            const url = new URL(`/all-accountants/`, window.location.origin)
+
+            fetch(url)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok ' + response.statusText);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        userFilter.innerHTML = '';
+                        const defaultOption = document.createElement('option');
+                        defaultOption.value = '';
+                        defaultOption.text = 'All Users';
+                        userFilter.appendChild(defaultOption);
+                
+                        data.users.forEach(user => {
+                            const option = document.createElement('option');
+                            option.value = user.id;
+                            option.text = user.email;
+                            userFilter.appendChild(option);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('There was a problem with the fetch operation:', error);
+                    });
+        }
+
+        function filterAccountants(companyId){
+
+            const url = new URL(`/filter-accountants/${companyId}/`, window.location.origin)
+
+            fetch(url)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok ' + response.statusText);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        userFilter.innerHTML = '';
+                        const defaultOption = document.createElement('option');
+                        defaultOption.value = '';
+                        defaultOption.text = 'All Users';
+                        userFilter.appendChild(defaultOption);
+                
+                        data.users.forEach(user => {
+                            const option = document.createElement('option');
+                            option.value = user.id;
+                            option.text = user.email;
+                            userFilter.appendChild(option);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('There was a problem with the fetch operation:', error);
+                    });
+        }
+    
+        function fetchEntries(page=1) {
+            const date = dateFilter.value;
+            const user = userFilter.value;
+            const type = typeFilter.value;
+    
+            const url = new URL('/entries/filter-entries-admin/', window.location.origin);
+            if (date) url.searchParams.set('date', date);
+            if (user) url.searchParams.set('user', user);
+            if (type) url.searchParams.set('type', type);
+            if (company) url.searchParams.set('company', company);
+            if (page) url.searchParams.set('approved_page', page);
+            console.log(page, 'below params');
+
+            function convertToUSD(amount, currency, rates) {
+                // Check if the currency exists in the rates object
+                if (rates.hasOwnProperty(currency)) {
+                    // Convert amount to USD using the fetched exchange rate
+                    return amount / rates[currency];
+                } else {
+                    console.error(`Exchange rate not available for currency: ${currency}`);
+                    return amount; // Return the original amount if exchange rate not found
+                }
+            }
+
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Update table
+                    entriesTableBody.innerHTML = '';
+                    data.entries.forEach(entry => {
+                        const row = document.createElement('tr');
+                        row.className = 'bg-gray-100';
+
+                        let receiptAmount = '-----';
+                        let paymentAmount = '-----';
+                        let action = '';
+                        
+                        if (entry.entry_type === 'receipt') {
+                            receiptAmount = `${entry.receipts}`;
+                            action = `<a href="/entries/edit-receipt/${entry.id}" class="text-blue-500 hover:text-blue-700 mr-2">edit</a>`
+                        }
+                        
+                        if (entry.entry_type === 'payment') {
+                            paymentAmount = `${entry.payments}`;
+                            action = `<a href="/entries/edit-payment/${entry.id}" class="text-blue-500 hover:text-blue-700 mr-2">edit</a>`
+                        }
+
+                        row.innerHTML = `
+                            <td class="py-2 px-4 border-b">${entry.user}</td>
+                            <td class="py-2 px-4 border-b">${receiptAmount}</td>
+                            <td class="py-2 px-4 border-b">${paymentAmount}</td>
+                            <td class="py-2 px-4 border-b">${entry.date}</td>
+                            <td class="py-2 px-4 border-b">${entry.company}</td>
+                            <td class="py-2 px-4 border-b">${entry.description}</td>
+                            <td class="py-2 px-4 border-b">${entry.category}</td>
+                            <td class="py-2 px-4 border-b">${entry.subcategory}</td>
+                            <td class="py-2 px-4 border-b">${entry.status}</td>
+                            <td class="py-2 px-4 border-b">${action}</td>
+                        `;
+                        entriesTableBody.appendChild(row);
+                    });
+
+                    pagination.innerHTML = '';
+                    if (data.has_previous) {
+                        pagination.innerHTML += `<a href="#" data-page="1" class="text-blue-500 hover:text-blue-700">First</a>`;
+                        pagination.innerHTML += `<a href="#" data-page="${data.previous_page_number}" class="text-blue-500 hover:text-blue-700 ml-3">Previous</a>`;
+                    }
+                    for (let num = 1; num <= data.total_pages; num++) {
+                        if (num === data.page_number) {
+                            pagination.innerHTML += `<span class="inline-block py-1 px-2 bg-blue-500 text-white rounded">${num}</span>`;
+                        } else {
+                            pagination.innerHTML += `<a href="#" data-page="${num}" class="inline-block py-1 px-2 text-blue-500 hover:text-blue-700">${num}</a>`;
+                        }
+                    }
+                    if (data.has_next) {
+                        pagination.innerHTML += `<a href="#" data-page="${data.next_page_number}" class="text-blue-500 hover:text-blue-700 mr-3">Next</a>`;
+                        pagination.innerHTML += `<a href="#" data-page="${data.total_pages}" class="text-blue-500 hover:text-blue-700">Last</a>`;
+                    }
+
+                    document.querySelectorAll('#pagination a').forEach(link => {
+                        link.addEventListener('click', event => {
+                            event.preventDefault();
+                            const page = event.target.getAttribute('data-page');
+                            localStorage.setItem('pageApproved', page);
+                            fetchEntries(page);
+                        });
+                    });
+    
+                    // Fetch latest exchange rates from Open Exchange Rates API
+                    const apiKey = '5f30749154a44be3ad6a646cacbfab5e'; // Replace with your actual API key
+                    const apiUrl = `https://open.exchangerate-api.com/v6/latest/USD?apiKey=${apiKey}`;
+
+                    // Update graph with currency conversion
+                    const dates = data.dates.map(dateStr => new Date(dateStr));
+                    const receipts = data.receipts;
+                    const payments = data.payments;
+                    const currencies = data.currencies;
+
+                    const datesFormatted = dates.map(dateStr => new Date(dateStr));
+
+                    fetch(apiUrl)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Failed to fetch exchange rates');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            const exchangeRates = data.rates;
+
+                            // Convert receipts and payments to USD using fetched exchange rates
+                            const convertedReceipts = receipts.map((amount, index) => convertToUSD(amount, currencies[index], exchangeRates));
+                            const convertedPayments = payments.map((amount, index) => convertToUSD(amount, currencies[index], exchangeRates));
+
+                            // Define data traces for Plotly chart
+                            const trace1 = {
+                                x: datesFormatted,
+                                y: convertedReceipts,
+                                mode: 'lines+markers',
+                                type: 'scatter',
+                                name: 'Receipts',
+                                line: {color: 'rgba(75, 192, 192, 1)'},
+                                fill: 'tozeroy'
+                            };
+
+                            const trace2 = {
+                                x: datesFormatted,
+                                y: convertedPayments,
+                                mode: 'lines+markers',
+                                type: 'scatter',
+                                name: 'Payments',
+                                line: {color: 'rgba(255, 99, 132, 1)'},
+                                fill: 'tozeroy'
+                            };
+
+                            const dataTraces = [trace1, trace2];
+
+                            // Define layout for Plotly chart
+                            const layout = {
+                                title: 'Receipts and Payments Over Time',
+                                xaxis: {
+                                    title: 'Date',
+                                    tickformat: '%Y-%m-%d',
+                                    automargin: true
+                                },
+                                yaxis: {
+                                    title: 'Amount in $',
+                                    automargin: true
+                                }
+                            };
+
+                            // Render Plotly chart
+                            Plotly.newPlot('time-series-chart', dataTraces, layout);
+                        })
+                        .catch(error => {
+                            console.error('Error fetching exchange rates:', error);
+                        });
+                })
+                .catch(error => {
+                    console.error('There was a problem with the fetch operation:', error);
+                });
+        }
+    
+        searchButton.addEventListener('click', () => {
+            fetchEntries(page = 1);
+        });
+        clearButton.addEventListener('click', () => {
+            dateFilter.value = '';
+            userFilter.value = '';
+            typeFilter.value = '';
+            companyFilter.value = '';
+            company = ''
+            let approvedPage = localStorage.getItem('pageApproved')
+            if (approvedPage !==''){
+                fetchEntries(approvedPage)
+            }else{
+                fetchEntries();
+            }
+        });
+    
+        // Initial fetch
+        let approvedPage = localStorage.getItem('pageApproved')
+            if (approvedPage !==''){
+                fetchEntries(approvedPage)
+            }else{
+                fetchEntries();
+            }
+    });
+    
+</script>
+{% endblock content %}
+
+

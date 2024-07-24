@@ -1,0 +1,114 @@
+{% extends "../base/base.html" %}
+
+{% block title %}receipt{% endblock title %}
+
+{% block content %}
+<div class="min-h-screen flex flex-col items-center justify-center">
+    <div class="w-1/3 font-semibold text-xl text-center">Receipt Entry</div>
+    <form class="mt-8 border-gray-300 rounded-md py-2 px-2 w-7/12" method="post">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="rounded-md shadow-sm">
+            
+            <div class="mb-4">
+                <label for="{{ form.receipts.id_for_label }}" class="block text-lg font-medium text-gray-700">
+                    {{ form.receipts.label }}
+                </label>
+                <div class="flex">
+                    <select name="{{ form.currency.name }}" id="{{ form.currency.id_for_label }}" class="mt-1 mr-1 block w-fit px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">
+                        {% for option in form.currency.field.choices %}
+                            <option value="{{ option.0 }}" {% if option.0 == form.currency.value %}selected{% endif %}>{{ option.1 }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" step="0.001" name="{{ form.receipts.name }}" id="{{ form.receipts.id_for_label }}" value="{{ form.receipts.value }}" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">
+                </div>
+                {% if form.receipts.errors %}
+                    <p class="text-red-500 text-xs italic">{{ form.receipts.errors }}</p>
+                {% endif %}
+                {% if form.currency.errors %}
+                    <p class="text-red-500 text-xs italic">{{ form.currency.errors }}</p>
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.date.id_for_label }}" class="block text-lg font-medium text-gray-700">
+                    {{ form.date.label }}
+                </label>
+                <input type="date" name="{{ form.date.name }}" id="{{ form.date.id_for_label }}" value="{{ form.date.value|date:'Y-m-d' }}" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">
+                {% if form.date.errors %}
+                    <p class="text-red-500 text-xs italic">{{ form.date.errors }}</p>
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.description.id_for_label }}" class="block text-lg font-medium text-gray-700">
+                    {{ form.description.label }}
+                </label>
+                <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">{{ form.description.value }}</textarea>
+                {% if form.description.errors %}
+                    <p class="text-red-500 text-xs italic">{{ form.description.errors }}</p>
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.category.id_for_label }}" class="block text-lg font-medium text-gray-700">
+                    {{ form.category.label }}
+                </label>
+                <select name="{{ form.category.name }}" id="{{ form.category.id_for_label }}" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">
+                    {% for option in form.category.field.choices %}
+                        <option value="{{ option.0 }}" {% if option.0 == form.category.value %}selected{% endif %}>{{ option.1 }}</option>
+                    {% endfor %}
+                </select>
+                {% if form.category.errors %}
+                    <p class="text-red-500 text-xs italic">{{ form.category.errors }}</p>
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.subcategory.id_for_label }}" class="block text-lg font-medium text-gray-700">
+                    {{ form.subcategory.label }}
+                </label>
+                <select name="{{ form.subcategory.name }}" id="{{ form.subcategory.id_for_label }}" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">
+                    {% for option in form.subcategory.field.choices %}
+                        <option value="{{ option.0 }}" {% if option.0 == form.subcategory.value %}selected{% endif %}>{{ option.1 }}</option>
+                    {% endfor %}
+                </select>
+                {% if form.subcategory.errors %}
+                    <p class="text-red-500 text-xs italic">{{ form.subcategory.errors }}</p>
+                {% endif %}
+            </div>
+            
+        </div>
+        <div>
+            <button type="submit" class="group relative w-full flex justify-center mt-3 py-2 px-4 border border-transparent text-lg font-medium rounded-md text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Submit
+            </button>
+        </div>
+    </form>
+
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" ></script>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#id_category').change(function () {
+            var url = '{% url "load_subcategories" %}';  // Set the URL of the `load_subcategories` view
+            var categoryId = $(this).val();
+            $.ajax({
+                url: url,
+                data: {
+                    'category': categoryId
+                },
+                success: function (data) {
+                    $('#id_subcategory').html('');
+                    $('#id_subcategory').append('<option value="">Select a subcategory</option>');
+                    $.each(data, function (key, value) {
+                        $('#id_subcategory').append('<option value="' + value.id + '">' + value.name + '</option>');
+                    });
+                }
+            });
+        });
+    });
+</script>
+{% endblock content%}

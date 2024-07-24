@@ -1,0 +1,31 @@
+
+{% extends "../base/base.html" %}
+
+{% block title %}create Category{% endblock title %}
+
+{% block content %}
+<div class="min-h-screen flex flex-col items-center justify-center">
+<div class="w-1/3 font-semibold text-xl text-center">Create Category</div>
+<form class="mt-8 border-gray-300 rounded-md py-2 px-2 w-5/12" method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="rounded-md shadow-sm -space-y-px">
+        <div class="mb-4">
+            <label for="{{ form.name.id_for_label }}" class="block text-lg font-medium text-gray-700">
+                {{ form.name.label }}
+            </label>
+            <input type="text" name="{{ form.name.name }}" id="{{ form.name.id_for_label }}" value="{{ form.name.value }}" class="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-lg">
+            {% if form.name.errors %}
+                <p class="text-red-500 text-xs italic">{{ form.name.errors }}</p>
+            {% endif %}
+        </div>
+      
+    </div>
+    <div>
+        <button type="submit" class="group relative w-full flex justify-center mt-3 py-2 px-4 border border-transparent text-lg font-medium rounded-md text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            Create Category
+        </button>
+    </div>
+</form>
+</div>
+{% endblock content %}
