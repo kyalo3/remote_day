@@ -193,6 +193,7 @@ proton-vpn-logger==0.2.1
 proton-vpn-network-manager==0.4.2
 proton-vpn-network-manager-openvpn==0.0.7
 psutil==5.9.0
+psycopg==3.2.1
 psycopg2-binary==2.9.9
 ptyprocess==0.7.0
 pyasn1==0.6.0
